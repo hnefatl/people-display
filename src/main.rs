@@ -1,8 +1,19 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
+mod pb {
+    pub mod clock {
+        tonic::include_proto!("clock");
+    }
+}
+
+use std::net::Ipv4Addr;
+
 use lazy_static::lazy_static;
 use tokio;
+
+use pb::clock::clock_service_server::{ClockService, ClockServiceServer};
+use pb::clock::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -47,16 +58,48 @@ async fn get_person_state(
     return Ok(None);
 }
 
-async fn main_loop() -> hass_rs::HassResult<!> {
-    let mut client = hass_rs::connect(&CONFIG.host, CONFIG.port).await?;
+pub struct ClockServer {}
+
+#[tonic::async_trait]
+impl ClockService for ClockServer {
+    async fn get_people_locations(
+        &self,
+        request: tonic::Request<GetPeopleLocationsRequest>,
+    ) -> Result<tonic::Response<GetPeopleLocationsResponse>, tonic::Status> {
+        Ok(tonic::Response::new(GetPeopleLocationsResponse {
+            locations: std::collections::HashMap::new(),
+        }))
+    }
+}
+
+#[derive(Debug)]
+enum ServerError {
+    HassError(hass_rs::HassError),
+    TonicError(tonic::transport::Error),
+}
+
+async fn main_loop(addr: std::net::SocketAddr) -> Result<!, ServerError> {
+    tonic::transport::Server::builder()
+        .add_service(ClockServiceServer::new(ClockServer {}))
+        .serve(addr)
+        .await
+        .map_err(ServerError::TonicError)?;
+
+    let mut client = hass_rs::connect(&CONFIG.host, CONFIG.port)
+        .await
+        .map_err(ServerError::HassError)?;
     println!("Connected, authenticating....");
     client
         .auth_with_longlivedtoken(&CONFIG.access_token)
-        .await?;
+        .await
+        .map_err(ServerError::HassError)?;
     println!("Authenticated, starting main loop...");
 
     loop {
-        match get_person_state(&mut client, &CONFIG.person_entity_id).await? {
+        match get_person_state(&mut client, &CONFIG.person_entity_id)
+            .await
+            .map_err(ServerError::HassError)?
+        {
             Some(person_state) => println!("{person_state:?}"),
             None => println!("Unable to find person {}", CONFIG.person_entity_id),
         }
@@ -71,9 +114,10 @@ async fn main_loop() -> hass_rs::HassResult<!> {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ! {
     println!("Read config: {:?}", *CONFIG);
+    let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED), 12733);
 
     loop {
-        let Err(e) = main_loop().await;
-        println!("Connection broken with error: {e}");
+        let Err(e) = main_loop(addr).await;
+        println!("Connection broken with error: {e:?}");
     }
 }

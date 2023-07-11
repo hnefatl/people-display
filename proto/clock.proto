@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package clock;
+
+message GetPeopleLocationsRequest {
+    repeated string person_entity_ids = 1;
+}
+message GetPeopleLocationsResponse {
+    map<string, string> locations = 1;
+}
+
+service ClockService {
+    rpc GetPeopleLocations(GetPeopleLocationsRequest) returns (GetPeopleLocationsResponse);
+}
