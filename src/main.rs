@@ -1,9 +1,8 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
-use async_std::prelude::*;
-use hass_rs::WSEvent;
 use lazy_static::lazy_static;
+use tokio;
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -62,14 +61,14 @@ async fn main_loop() -> hass_rs::HassResult<!> {
             None => println!("Unable to find person {}", CONFIG.person_entity_id),
         }
 
-        async_std::task::sleep(std::time::Duration::from_secs(
+        tokio::time::sleep(std::time::Duration::from_secs(
             CONFIG.poll_seconds.unwrap_or(60).into(),
         ))
         .await;
     }
 }
 
-#[async_std::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> ! {
     println!("Read config: {:?}", *CONFIG);
 

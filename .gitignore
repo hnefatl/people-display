@@ -1,1 +1,3 @@
 /target
+# Contains API secret, shouldn't be committed.
+run.sh
