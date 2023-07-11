@@ -1,0 +1,13 @@
+[package]
+name = "clock-client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# The current 0.2 release has a broken `serde` build.
+hass-rs = { git = "https://github.com/danrusei/hass-rs", rev="a51d02c3202568076b6bc093466ad0277a812946", features = ["async-std-runtime"] }
+futures = "0.3.0"
+async-std = { version = "1", features = ["attributes"] }
+lazy_static = "1.4.0"
