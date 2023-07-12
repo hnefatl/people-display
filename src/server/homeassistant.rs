@@ -2,14 +2,16 @@ use hass_rs::{HassClient, HassEntity, HassResult};
 
 pub type PersonId = String;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Person {
     pub name: String,
     pub photo: Vec<u8>,
 }
+#[derive(Debug)]
 pub struct Zone {
     pub name: String,
 }
+#[derive(Debug)]
 pub struct Snapshot {
     pub people: Vec<(Person, Zone)>,
 }

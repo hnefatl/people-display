@@ -2,11 +2,20 @@ syntax = "proto3";
 
 package clock;
 
-message GetPeopleLocationsRequest {
-    repeated string person_entity_ids = 1;
+message Person {
+    string name = 1;
+    bytes photo_data = 2;
+    Zone location = 3;
 }
+message Zone {
+    string name = 1;
+    bytes photo_data = 2;
+}
+
+// There's no data to send in the request: the client is asking the server for any relevant people.
+message GetPeopleLocationsRequest {}
 message GetPeopleLocationsResponse {
-    map<string, string> locations = 1;
+    repeated Person people = 1;
 }
 
 service ClockService {
