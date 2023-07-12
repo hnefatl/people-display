@@ -1,19 +1,13 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
-mod pb {
-    pub mod clock {
-        tonic::include_proto!("clock");
-    }
-}
-
 use std::net::Ipv4Addr;
 
 use lazy_static::lazy_static;
 use tokio;
 
-use pb::clock::clock_service_server::{ClockService, ClockServiceServer};
-use pb::clock::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
+use clock_pb::clock_service_server::{ClockService, ClockServiceServer};
+use clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 
 #[derive(Debug, Clone)]
 struct Config {
