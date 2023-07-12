@@ -7,10 +7,10 @@ use std::net::Ipv4Addr;
 use tokio;
 
 mod config;
-use config::CONFIG;
 mod homeassistant;
 
 pub struct ClockServer {
+    homeassistant_connection_config: config::HomeAssistantConfig,
     person_ids: Vec<homeassistant::PersonId>,
 }
 
@@ -21,9 +21,9 @@ impl ClockService for ClockServer {
         request: tonic::Request<GetPeopleLocationsRequest>,
     ) -> tonic::Result<tonic::Response<GetPeopleLocationsResponse>> {
         let snapshot = homeassistant::get_snapshot(
-            &CONFIG.home_assistant_host,
-            CONFIG.home_assistant_port,
-            &CONFIG.home_assistant_access_token,
+            &self.homeassistant_connection_config.host,
+            self.homeassistant_connection_config.port,
+            &self.homeassistant_connection_config.access_token,
             &self.person_ids,
         )
         .await
@@ -37,24 +37,17 @@ impl ClockService for ClockServer {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ! {
-    println!("Read config: {:?}", *CONFIG);
-    let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED), 12733);
+    let config = config::get_config_from_environment_variables().unwrap();
+    println!("Read config: {:?}", config);
 
-    let testing_entity_ids = vec!["person.keith".into()];
-    let testing_snapshot = homeassistant::get_snapshot(
-        &CONFIG.home_assistant_host,
-        CONFIG.home_assistant_port,
-        &CONFIG.home_assistant_access_token,
-        &testing_entity_ids,
-    )
-    .await;
-    println!("{testing_snapshot:?}");
+    let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED), 12733);
 
     println!("Starting server.");
     loop {
         let serve = tonic::transport::Server::builder()
             .add_service(ClockServiceServer::new(ClockServer {
-                person_ids: CONFIG.person_entity_ids.clone(),
+                homeassistant_connection_config: config.homeassistant.clone(),
+                person_ids: config.person_entity_ids.clone(),
             }))
             .serve(addr);
         if let Err(e) = serve.await {

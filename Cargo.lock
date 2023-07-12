@@ -181,7 +181,6 @@ name = "clock"
 version = "0.1.0"
 dependencies = [
  "hass-rs",
- "lazy_static",
  "prost",
  "tokio",
  "tonic",

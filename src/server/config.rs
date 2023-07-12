@@ -1,12 +1,14 @@
-use lazy_static::lazy_static;
-
 #[derive(Debug, Clone)]
 pub struct Config {
     pub port: u16,
-    pub home_assistant_host: String,
-    pub home_assistant_port: u16,
-    pub home_assistant_access_token: String,
+    pub homeassistant: HomeAssistantConfig,
     pub person_entity_ids: Vec<String>,
+}
+#[derive(Debug, Clone)]
+pub struct HomeAssistantConfig {
+    pub host: String,
+    pub port: u16,
+    pub access_token: String,
 }
 
 trait ConfigParamFromEnv {
@@ -50,20 +52,14 @@ where
     }
 }
 
-fn make_config_from_environment_variables() -> Result<Config, String> {
+pub fn get_config_from_environment_variables() -> Result<Config, String> {
     Ok(Config {
         port: get_env_variable("PORT")?,
-        home_assistant_host: get_env_variable("HOME_ASSISTANT_HOST")?,
-        home_assistant_port: get_env_variable("HOME_ASSISTANT_PORT")?,
-        home_assistant_access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN")?,
+        homeassistant: HomeAssistantConfig {
+            host: get_env_variable("HOME_ASSISTANT_HOST")?,
+            port: get_env_variable("HOME_ASSISTANT_PORT")?,
+            access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN")?,
+        },
         person_entity_ids: get_env_variable("PERSON_ENTITY_IDS")?,
     })
-}
-
-lazy_static! {
-    /// The configuration, as parsed from environment variables.
-    //
-    // This unwraps the result so will panic if any of the environment variables are invalid.
-    // This should be "okay" as it's initialised at the start of the program.
-    pub static ref CONFIG: Config = make_config_from_environment_variables().unwrap();
 }
