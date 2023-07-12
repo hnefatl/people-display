@@ -8,10 +8,12 @@ use tokio;
 
 mod config;
 mod homeassistant;
+mod photo_manager;
 
 pub struct ClockServer {
     homeassistant_connection_config: config::HomeAssistantConfig,
     person_ids: Vec<homeassistant::PersonId>,
+    photo_manager: photo_manager::PhotoManager,
 }
 
 #[tonic::async_trait]
@@ -30,7 +32,7 @@ impl ClockService for ClockServer {
         .map_err(|e| tonic::Status::unavailable(format!("Failed to query home assistant: {e}")))?;
 
         Ok(tonic::Response::new(GetPeopleLocationsResponse {
-            people: vec![],
+            people: snapshot.people.iter().map()
         }))
     }
 }
@@ -44,11 +46,13 @@ async fn main() -> ! {
 
     println!("Starting server.");
     loop {
+        let clock_service = ClockServiceServer::new(ClockServer {
+            homeassistant_connection_config: config.homeassistant.clone(),
+            person_ids: config.person_entity_ids.clone(),
+            photo_manager: photo_manager::PhotoManager::new(config.photo_directory.clone()),
+        });
         let serve = tonic::transport::Server::builder()
-            .add_service(ClockServiceServer::new(ClockServer {
-                homeassistant_connection_config: config.homeassistant.clone(),
-                person_ids: config.person_entity_ids.clone(),
-            }))
+            .add_service(clock_service)
             .serve(addr);
         if let Err(e) = serve.await {
             println!("Server halted with error: {e:?}");

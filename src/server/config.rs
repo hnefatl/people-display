@@ -3,6 +3,7 @@ pub struct Config {
     pub port: u16,
     pub homeassistant: HomeAssistantConfig,
     pub person_entity_ids: Vec<String>,
+    pub photo_directory: std::path::PathBuf,
 }
 #[derive(Debug, Clone)]
 pub struct HomeAssistantConfig {
@@ -25,6 +26,11 @@ impl ConfigParamFromEnv for u16 {
     fn parse(val: &str) -> Result<u16, String> {
         val.parse()
             .map_err(|e: std::num::ParseIntError| e.to_string())
+    }
+}
+impl ConfigParamFromEnv for std::path::PathBuf {
+    fn parse(val: &str) -> Result<std::path::PathBuf, String> {
+        Ok(val.into())
     }
 }
 impl<T> ConfigParamFromEnv for Vec<T>
@@ -61,5 +67,6 @@ pub fn get_config_from_environment_variables() -> Result<Config, String> {
             access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN")?,
         },
         person_entity_ids: get_env_variable("PERSON_ENTITY_IDS")?,
+        photo_directory: get_env_variable("PHOTO_DIRECTORY")?,
     })
 }

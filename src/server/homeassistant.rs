@@ -1,36 +1,63 @@
 use hass_rs::{HassClient, HassEntity, HassResult};
 
-pub type PersonId = String;
+type EntityId = String;
+pub type PersonId = EntityId;
+type ZoneId = EntityId;
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Person {
-    pub name: String,
+    /// HomeAssistant entity id like `person.keith`
+    pub id: PersonId,
+    /// Human-readable name like "Keith"
+    pub name: Option<String>,
+    pub zone_id: ZoneId,
 }
 #[derive(Debug)]
 pub struct Zone {
-    pub name: String,
+    pub id: String,
+    pub name: Option<String>,
 }
 #[derive(Debug)]
 pub struct Snapshot {
-    pub people: Vec<(Person, Zone)>,
+    pub people: Vec<Person>,
+    pub zones: std::collections::HashMap<ZoneId, Zone>,
 }
 
-// Get all the states of the given people IDs that we can find.
-async fn get_people_states(
-    client: &mut HassClient,
-    entity_ids: &Vec<PersonId>,
-) -> HassResult<Vec<HassEntity>> {
-    // Preprocess the entity ids to make membership tests faster.
-    let entity_id_lookup = std::collections::HashSet::<_>::from_iter(entity_ids);
+type EntityStates = std::collections::HashMap<EntityId, HassEntity>;
 
-    let all_entity_states = client.get_states().await?;
-    let mut relevant_people_states = vec![];
-    for entity in all_entity_states {
-        if entity_id_lookup.contains(&entity.entity_id) {
-            relevant_people_states.push(entity);
-        }
-    }
-    return Ok(relevant_people_states);
+async fn get_states(
+    client: &mut HassClient,
+) -> HassResult<std::collections::HashMap<String, HassEntity>> {
+    Ok(client
+        .get_states()
+        .await?
+        .into_iter()
+        .map(|e| (e.entity_id.clone(), e))
+        .collect())
+}
+
+fn get_friendly_name(entity: &HassEntity) -> Option<String> {
+    entity
+        .attributes
+        .get("friendly_name")?
+        .as_str()
+        .map(str::to_string)
+}
+
+fn get_zone(zone_id: &ZoneId, entity_states: &EntityStates) -> Option<Zone> {
+    let zone_entity = entity_states.get(zone_id)?;
+    Some(Zone {
+        id: zone_id.clone(),
+        name: get_friendly_name(&zone_entity),
+    })
+}
+fn get_person(person_id: &PersonId, entity_states: &EntityStates) -> Option<Person> {
+    let person_entity = entity_states.get(person_id)?;
+    Some(Person {
+        id: person_id.clone(),
+        name: get_friendly_name(&person_entity),
+        zone_id: "zone.".to_string() + &person_entity.state,
+    })
 }
 
 async fn open_hass_client(host: &str, port: u16, access_token: &str) -> HassResult<HassClient> {
@@ -46,12 +73,19 @@ pub async fn get_snapshot(
     entity_ids: &Vec<PersonId>,
 ) -> HassResult<Snapshot> {
     let mut client = open_hass_client(host, port, access_token).await?;
+    let states = get_states(&mut client).await?;
 
-    let states = get_people_states(&mut client, entity_ids).await?;
-    return Ok(Snapshot {
-        people: states
-            .into_iter()
-            .map(|s| (Person { name: s.entity_id }, Zone { name: s.state }))
-            .collect(),
-    });
+    let people: Vec<Person> = entity_ids
+        .iter()
+        .filter_map(|i| get_person(i, &states))
+        .collect();
+
+    let zone_ids: std::collections::HashSet<ZoneId> =
+        people.iter().map(|p| p.zone_id.clone()).collect();
+    let zones = zone_ids
+        .iter()
+        .filter_map(|i| get_zone(i, &states))
+        .map(|e| (e.id.clone(), e))
+        .collect();
+    return Ok(Snapshot { people, zones });
 }
