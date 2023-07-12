@@ -17,45 +17,51 @@ use pb::clock::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 
 #[derive(Debug, Clone)]
 struct Config {
-    host: String,
-    port: u16,
-    access_token: String,
-    person_entity_id: String,
-    poll_seconds: Option<u16>,
+    home_assistant_host: String,
+    home_assistant_port: u16,
+    home_assistant_access_token: String,
 }
 
 fn get_env_variable(key: &str) -> Result<String, String> {
     std::env::var(key).map_err(|e| format!("Failed to get environment variable '{key}': {e}"))
 }
-fn get_optional_env_variable(key: &str) -> Option<String> {
-    get_env_variable(key).ok()
-}
 lazy_static! {
     static ref CONFIG: Config = Config {
-        host: get_env_variable("HOST").unwrap(),
-        port: get_env_variable("PORT")
+        home_assistant_host: get_env_variable("HOME_ASSISTANT_HOST").unwrap(),
+        home_assistant_port: get_env_variable("HOME_ASSISTANT_PORT")
             .and_then(|v| v.parse().map_err(|e| format!("Invalid port: {e}")))
             .unwrap(),
-        access_token: get_env_variable("ACCESS_TOKEN").unwrap(),
-        person_entity_id: get_env_variable("PERSON_ENTITY_ID").unwrap(),
-        poll_seconds: get_optional_env_variable("POLL_SECONDS").map(|v| v
-            .parse()
-            .map_err(|e| format!("Invalid poll seconds: {e}"))
-            .unwrap())
+        home_assistant_access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN").unwrap(),
     };
 }
 
-async fn get_person_state(
+type PersonId = String;
+
+// Get all the states of the given people IDs that we can find.
+async fn get_people_states(
     client: &mut hass_rs::HassClient,
-    person_entity_id: &str,
-) -> hass_rs::HassResult<Option<hass_rs::HassEntity>> {
-    let states = client.get_states().await?;
-    for entity in states {
-        if entity.entity_id == person_entity_id {
-            return Ok(Some(entity));
+    entity_ids: &Vec<PersonId>,
+) -> hass_rs::HassResult<Vec<hass_rs::HassEntity>> {
+    // Preprocess the entity ids to make membership tests faster.
+    let entity_id_lookup = std::collections::HashSet::<_>::from_iter(entity_ids);
+
+    let all_entity_states = client.get_states().await?;
+    let mut relevant_people_states = vec![];
+    for entity in all_entity_states {
+        if entity_id_lookup.contains(&entity.entity_id) {
+            relevant_people_states.push(entity);
         }
     }
-    return Ok(None);
+    return Ok(relevant_people_states);
+}
+
+async fn open_hass_client() -> hass_rs::HassResult<hass_rs::HassClient> {
+    let mut client =
+        hass_rs::connect(&CONFIG.home_assistant_host, CONFIG.home_assistant_port).await?;
+    client
+        .auth_with_longlivedtoken(&CONFIG.home_assistant_access_token)
+        .await?;
+    return Ok(client);
 }
 
 pub struct ClockServer {}
@@ -66,49 +72,31 @@ impl ClockService for ClockServer {
         &self,
         request: tonic::Request<GetPeopleLocationsRequest>,
     ) -> Result<tonic::Response<GetPeopleLocationsResponse>, tonic::Status> {
+        let mut client = open_hass_client().await.map_err(|e| {
+            tonic::Status::unavailable(format!("Failed to connect to home assistant instance: {e}"))
+        })?;
+
+        let person_ids = &request.into_inner().person_entity_ids;
+        let person_states = get_people_states(&mut client, person_ids)
+            .await
+            .map_err(|e| {
+                tonic::Status::unavailable(format!("Failed to query home assistant: {e}"))
+            })?;
+
         Ok(tonic::Response::new(GetPeopleLocationsResponse {
-            locations: std::collections::HashMap::new(),
+            locations: person_states
+                .into_iter()
+                .map(|s| (s.entity_id, s.state))
+                .collect(),
         }))
     }
 }
 
-#[derive(Debug)]
-enum ServerError {
-    HassError(hass_rs::HassError),
-    TonicError(tonic::transport::Error),
-}
-
-async fn main_loop(addr: std::net::SocketAddr) -> Result<!, ServerError> {
+async fn start_server(addr: std::net::SocketAddr) -> Result<(), tonic::transport::Error> {
     tonic::transport::Server::builder()
         .add_service(ClockServiceServer::new(ClockServer {}))
         .serve(addr)
         .await
-        .map_err(ServerError::TonicError)?;
-
-    let mut client = hass_rs::connect(&CONFIG.host, CONFIG.port)
-        .await
-        .map_err(ServerError::HassError)?;
-    println!("Connected, authenticating....");
-    client
-        .auth_with_longlivedtoken(&CONFIG.access_token)
-        .await
-        .map_err(ServerError::HassError)?;
-    println!("Authenticated, starting main loop...");
-
-    loop {
-        match get_person_state(&mut client, &CONFIG.person_entity_id)
-            .await
-            .map_err(ServerError::HassError)?
-        {
-            Some(person_state) => println!("{person_state:?}"),
-            None => println!("Unable to find person {}", CONFIG.person_entity_id),
-        }
-
-        tokio::time::sleep(std::time::Duration::from_secs(
-            CONFIG.poll_seconds.unwrap_or(60).into(),
-        ))
-        .await;
-    }
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -116,8 +104,12 @@ async fn main() -> ! {
     println!("Read config: {:?}", *CONFIG);
     let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED), 12733);
 
+    println!("Starting server.");
     loop {
-        let Err(e) = main_loop(addr).await;
-        println!("Connection broken with error: {e:?}");
+        if let Err(e) = start_server(addr).await {
+            println!("Server halted with error: {e:?}");
+        } else {
+            println!("Server halted silently, restarting.");
+        }
     }
 }
