@@ -8,35 +8,7 @@ use tokio;
 
 mod config;
 use config::CONFIG;
-
-type PersonId = String;
-
-// Get all the states of the given people IDs that we can find.
-async fn get_people_states(
-    client: &mut hass_rs::HassClient,
-    entity_ids: &Vec<PersonId>,
-) -> hass_rs::HassResult<Vec<hass_rs::HassEntity>> {
-    // Preprocess the entity ids to make membership tests faster.
-    let entity_id_lookup = std::collections::HashSet::<_>::from_iter(entity_ids);
-
-    let all_entity_states = client.get_states().await?;
-    let mut relevant_people_states = vec![];
-    for entity in all_entity_states {
-        if entity_id_lookup.contains(&entity.entity_id) {
-            relevant_people_states.push(entity);
-        }
-    }
-    return Ok(relevant_people_states);
-}
-
-async fn open_hass_client() -> hass_rs::HassResult<hass_rs::HassClient> {
-    let mut client =
-        hass_rs::connect(&CONFIG.home_assistant_host, CONFIG.home_assistant_port).await?;
-    client
-        .auth_with_longlivedtoken(&CONFIG.home_assistant_access_token)
-        .await?;
-    return Ok(client);
-}
+mod homeassistant;
 
 pub struct ClockServer {}
 
@@ -46,22 +18,18 @@ impl ClockService for ClockServer {
         &self,
         request: tonic::Request<GetPeopleLocationsRequest>,
     ) -> tonic::Result<tonic::Response<GetPeopleLocationsResponse>> {
-        let mut client = open_hass_client().await.map_err(|e| {
-            tonic::Status::unavailable(format!("Failed to connect to home assistant instance: {e}"))
-        })?;
-
-        let person_ids = &request.into_inner().person_entity_ids;
-        let person_states = get_people_states(&mut client, person_ids)
-            .await
-            .map_err(|e| {
-                tonic::Status::unavailable(format!("Failed to query home assistant: {e}"))
-            })?;
+        let person_ids: &Vec<homeassistant::PersonId> = &request.into_inner().person_entity_ids;
+        let snapshot = homeassistant::get_snapshot(
+            &CONFIG.home_assistant_host,
+            CONFIG.home_assistant_port,
+            &CONFIG.home_assistant_access_token,
+            person_ids,
+        )
+        .await
+        .map_err(|e| tonic::Status::unavailable(format!("Failed to query home assistant: {e}")))?;
 
         Ok(tonic::Response::new(GetPeopleLocationsResponse {
-            locations: person_states
-                .into_iter()
-                .map(|s| (s.entity_id, s.state))
-                .collect(),
+            locations: std::collections::HashMap::new(),
         }))
     }
 }

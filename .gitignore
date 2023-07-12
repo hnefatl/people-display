@@ -1,4 +1,4 @@
 /target
 .vscode
 # Contains API secret, shouldn't be committed.
-run.sh
+run_server.sh
