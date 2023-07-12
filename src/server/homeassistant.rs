@@ -5,7 +5,6 @@ pub type PersonId = String;
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Person {
     pub name: String,
-    pub photo: Vec<u8>,
 }
 #[derive(Debug)]
 pub struct Zone {
@@ -52,15 +51,7 @@ pub async fn get_snapshot(
     return Ok(Snapshot {
         people: states
             .into_iter()
-            .map(|s| {
-                (
-                    Person {
-                        name: s.entity_id,
-                        photo: vec![],
-                    },
-                    Zone { name: s.state },
-                )
-            })
+            .map(|s| (Person { name: s.entity_id }, Zone { name: s.state }))
             .collect(),
     });
 }
