@@ -1,33 +1,13 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
-use std::net::Ipv4Addr;
-
-use lazy_static::lazy_static;
-use tokio;
-
 use clock_pb::clock_service_server::{ClockService, ClockServiceServer};
 use clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
+use std::net::Ipv4Addr;
+use tokio;
 
-#[derive(Debug, Clone)]
-struct Config {
-    home_assistant_host: String,
-    home_assistant_port: u16,
-    home_assistant_access_token: String,
-}
-
-fn get_env_variable(key: &str) -> Result<String, String> {
-    std::env::var(key).map_err(|e| format!("Failed to get environment variable '{key}': {e}"))
-}
-lazy_static! {
-    static ref CONFIG: Config = Config {
-        home_assistant_host: get_env_variable("HOME_ASSISTANT_HOST").unwrap(),
-        home_assistant_port: get_env_variable("HOME_ASSISTANT_PORT")
-            .and_then(|v| v.parse().map_err(|e| format!("Invalid port: {e}")))
-            .unwrap(),
-        home_assistant_access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN").unwrap(),
-    };
-}
+mod config;
+use config::CONFIG;
 
 type PersonId = String;
 
@@ -65,7 +45,7 @@ impl ClockService for ClockServer {
     async fn get_people_locations(
         &self,
         request: tonic::Request<GetPeopleLocationsRequest>,
-    ) -> Result<tonic::Response<GetPeopleLocationsResponse>, tonic::Status> {
+    ) -> tonic::Result<tonic::Response<GetPeopleLocationsResponse>> {
         let mut client = open_hass_client().await.map_err(|e| {
             tonic::Status::unavailable(format!("Failed to connect to home assistant instance: {e}"))
         })?;
