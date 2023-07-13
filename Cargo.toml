@@ -8,12 +8,12 @@ name = "clock_pb"
 path = "lib/clock_pb/clock_pb.rs"
 
 [[bin]]
-name = "client"
-path = "src/client/main.rs"
+name = "display"
+path = "src/display/main.rs"
 
 [[bin]]
-name = "server"
-path = "src/server/main.rs"
+name = "exporter"
+path = "src/exporter/main.rs"
 
 [dependencies]
 # The current 0.2 release has a broken `serde` build.
