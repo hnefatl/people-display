@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "clock_pb"
-path = "lib/clock_pb/clock_pb.rs"
+name = "lib"
+path = "lib/lib.rs"
 
 [[bin]]
 name = "display"

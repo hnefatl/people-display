@@ -2,9 +2,9 @@ use crate::config;
 use crate::homeassistant;
 use crate::photo_manager;
 
-use clock_pb;
-use clock_pb::clock_service_server::{ClockService, ClockServiceServer};
-use clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
+use lib::clock_pb;
+use lib::clock_pb::clock_service_server::{ClockService, ClockServiceServer};
+use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 
 use log;
 
