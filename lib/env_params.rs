@@ -1,4 +1,6 @@
-trait ConfigParamFromEnv {
+use std::str::FromStr;
+
+pub trait ConfigParamFromEnv {
     fn parse(val: &str) -> Result<Self, String>
     where
         Self: Sized;
@@ -19,6 +21,11 @@ impl ConfigParamFromEnv for std::path::PathBuf {
         Ok(val.into())
     }
 }
+impl ConfigParamFromEnv for tonic::transport::Uri {
+    fn parse(val: &str) -> Result<tonic::transport::Uri, String> {
+        tonic::transport::Uri::from_str(val).map_err(|e| format!("Invalid URI: {e}"))
+    }
+}
 impl<T> ConfigParamFromEnv for Vec<T>
 where
     T: ConfigParamFromEnv,
@@ -28,13 +35,13 @@ where
     }
 }
 
-fn get_env_variable<T>(key: &str) -> Result<T, String>
+pub fn get_env_variable<T>(key: &str) -> Result<T, String>
 where
     T: ConfigParamFromEnv,
 {
     get_optional_env_variable(key)?.ok_or(format!("Environment variable '{key}' not set."))
 }
-fn get_optional_env_variable<T>(key: &str) -> Result<Option<T>, String>
+pub fn get_optional_env_variable<T>(key: &str) -> Result<Option<T>, String>
 where
     T: ConfigParamFromEnv,
 {

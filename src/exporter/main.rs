@@ -11,16 +11,16 @@ mod config;
 mod homeassistant;
 mod photo_manager;
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> ! {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     let config = config::get_config_from_environment_variables().unwrap();
     log::info!("Read config: {:?}", config);
 
-    let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED), 12733);
+    let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port);
 
-    log::info!("Starting server.");
+    log::info!("Starting server on {addr}");
     loop {
         let clock_service = clock_service::ClockServer::make_server(
             config.homeassistant.clone(),
