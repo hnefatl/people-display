@@ -1,8 +1,8 @@
 use hass_rs::{HassClient, HassEntity, HassResult};
 
-type EntityId = String;
+pub type EntityId = String;
 pub type PersonId = EntityId;
-type ZoneId = EntityId;
+pub type ZoneId = EntityId;
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Person {

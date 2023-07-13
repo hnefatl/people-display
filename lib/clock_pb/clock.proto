@@ -4,22 +4,23 @@ package clock;
 
 message Person {
     string id = 1;
-    string name = 2;
+    optional string name = 2;
     string zone_id = 3;
 
     // The raw contents of an image file, e.g. .png/.jpg.
-    bytes photo_data = 4;
+    optional bytes photo_data = 4;
 }
 message Zone {
     string id = 1;
-    string name = 2;
-    bytes photo_data = 3;
+    optional string name = 2;
+    optional bytes photo_data = 3;
 }
 
 // There's no data to send in the request: the client is asking the server for any relevant people.
 message GetPeopleLocationsRequest {}
 message GetPeopleLocationsResponse {
     repeated Person people = 1;
+    repeated Zone zones = 2;
 }
 
 service ClockService {
