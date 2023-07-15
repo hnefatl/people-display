@@ -50,3 +50,10 @@ where
         Err(_) => Ok(None),
     }
 }
+
+pub fn get_env_variable_with_default<T>(key: &str, default: T) -> Result<T, String>
+where
+    T: ConfigParamFromEnv,
+{
+    get_optional_env_variable(key).map(|v| v.unwrap_or(default))
+}
