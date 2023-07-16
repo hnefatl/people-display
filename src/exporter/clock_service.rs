@@ -12,7 +12,9 @@ fn get_photo(
     photo_manager: &photo_manager::PhotoManager,
     entity_id: &homeassistant::EntityId,
 ) -> Option<Vec<u8>> {
-    match photo_manager.get_photo(std::path::Path::new(entity_id)) {
+    // Replace `.` with `_` so that setting a `.png`/`.jpg` extension is easier.
+    let filename = entity_id.replace(".", "_");
+    match photo_manager.get_photo(std::path::Path::new(&filename)) {
         Ok(data) => Some(data),
         Err(e) => {
             log::warn!("Unable to load photo for entity id '{entity_id}': {e}");
@@ -95,7 +97,7 @@ impl ClockService for ClockServer {
                     .collect(),
             }))
         };
-        log::info!("Responding with: {result:?}");
+        log::trace!("Responding with: {result:?}");
         result
     }
 }

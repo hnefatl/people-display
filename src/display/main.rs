@@ -1,146 +1,172 @@
-use std::sync::Arc;
-
 use env_logger;
-use gtk::gdk::gdk_pixbuf::Pixbuf;
-use gtk::gdk::Texture;
-use gtk::glib::{clone, MainContext, Priority};
-use gtk::{prelude::*, Image};
-use gtk::{Application, ApplicationWindow, Button};
-use gtk4 as gtk;
-use gtk4::glib;
 use log;
-use prost::encoding::bytes;
+use sdl2::event::Event;
+use sdl2::image::LoadTexture;
+use sdl2::keyboard::Keycode;
+use sdl2::rect::Rect;
+use sdl2::video::Window;
+use snapshot_manager::{EndpointSnapshots, Snapshot, SnapshotManager};
+use std::time::Duration;
 use tokio;
 
+use sdl2::render::{Canvas, Texture, TextureCreator};
+
 use lib::clock_pb;
-use lib::clock_pb::clock_service_client::ClockServiceClient;
-use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 use lib::env_params::{get_env_variable, get_env_variable_with_default};
+mod snapshot_manager;
 
-async fn get_snapshots(
-    endpoint_uris: &Vec<tonic::transport::Uri>,
-) -> Vec<GetPeopleLocationsResponse> {
-    let mut responses = vec![];
-    for endpoint in endpoint_uris {
-        log::info!("Connecting to {}", endpoint);
-        let mut client = ClockServiceClient::connect(endpoint.clone()).await.unwrap();
-        log::info!("Connected");
-        let rpc = client
-            .get_people_locations(GetPeopleLocationsRequest {})
-            .await
-            .unwrap();
-        let response = rpc.into_inner();
+fn bytes_to_texture<'a, T>(
+    texture_creator: &'a TextureCreator<T>,
+    bytes: &Vec<u8>,
+) -> Result<Texture<'a>, String> {
+    texture_creator.load_texture_bytes(bytes)
+}
 
-        log::info!("Got response: {response:?}");
-        responses.push(response);
+struct Tile<'a> {
+    person_name: Option<String>,
+    person_texture: Option<Texture<'a>>,
+    background_texture: Texture<'a>,
+}
+impl<'a> Tile<'a> {
+    pub fn new<T>(
+        texture_creator: &'a TextureCreator<T>,
+        person: &clock_pb::Person,
+        zone: Option<&clock_pb::Zone>,
+    ) -> Result<Self, String> {
+        let person_texture = person
+            .photo_data
+            .as_ref()
+            .map(|b| bytes_to_texture(texture_creator, &b))
+            .transpose()
+            .map_err(|e| format!("{e}"))?;
+        let zone_texture = zone
+            .and_then(|z| z.photo_data.as_ref())
+            .map(|b| bytes_to_texture(texture_creator, &b))
+            .transpose()
+            .map_err(|e| format!("{e}"))?;
+
+        let background_texture = match zone_texture {
+            Some(t) => t,
+            None => {
+                log::info!("Using blank texture for {person:?}, no zone photo data provided.");
+                texture_creator
+                    .create_texture_static(sdl2::pixels::PixelFormatEnum::RGB24, 100, 100)
+                    .map_err(|e| format!("Unable to create blank texture: {e}"))?
+            }
+        };
+
+        Ok(Tile {
+            person_name: person.name.clone(),
+            person_texture: person_texture,
+            background_texture,
+        })
     }
-    return responses;
+
+    pub fn draw<T>(&self, canvas: &mut Canvas<T>, dest: Rect) -> Result<(), String>
+    where
+        T: sdl2::render::RenderTarget,
+    {
+        // TODO: sort scaling/cropping
+        const PERSON_RATIO: u32 = 4;
+        canvas.copy(&self.background_texture, None, dest)?;
+        if let Some(person_texture) = &self.person_texture {
+            let person_size =
+                std::cmp::min(dest.width() / PERSON_RATIO, dest.height() / PERSON_RATIO);
+            let mut person_rect = Rect::new(0, 0, person_size, person_size);
+            person_rect.center_on(dest.center());
+            canvas.copy(&person_texture, None, person_rect)?;
+        }
+        Ok(())
+    }
 }
 
-fn bytes_to_image(bytes: &Vec<u8>) -> Result<Image, glib::Error> {
-    Texture::from_bytes(&glib::Bytes::from_owned(bytes.clone()))
-        .map(|t| Image::from_paintable(Some(&t)))
-}
-
-fn entities_to_image(
-    person: &clock_pb::Person,
-    zone: Option<&clock_pb::Zone>,
-) -> Result<Image, String> {
-    let person_image = person
-        .photo_data
-        .as_ref()
-        .map(|b| bytes_to_image(&b))
-        .transpose()
-        .map_err(|e| format!("{e}"))?;
-    let zone_image = zone
-        .and_then(|z| z.photo_data.as_ref())
-        .map(|b| bytes_to_image(&b))
-        .transpose()
-        .map_err(|e| format!("{e}"))?;
-
-    let blank_pixbuf = Pixbuf::new(gtk::gdk_pixbuf::Colorspace::Rgb, false, 8, 100, 100)
-        .ok_or("Unable to parse pixbuf")?;
-    blank_pixbuf.fill(0);
-    let blank_image = Image::from_pixbuf(Some(&blank_pixbuf));
-
-    Ok(zone_image.unwrap_or(blank_image))
-}
-
-fn snapshot_to_images(snapshot: GetPeopleLocationsResponse) -> Vec<Image> {
-    let zones: std::collections::HashMap<String, clock_pb::Zone> = snapshot
-        .zones
-        .into_iter()
-        .map(|z| (z.id.clone(), z))
-        .collect();
-    let mut images = vec![];
-    for person in snapshot.people {
-        match entities_to_image(&person, zones.get(&person.zone_id)) {
-            Ok(image) => images.push(image),
+fn snapshot_to_tiles<'a, T>(
+    texture_creator: &'a TextureCreator<T>,
+    snapshot: &Snapshot,
+) -> Vec<Tile<'a>> {
+    let mut tiles = vec![];
+    for person in &snapshot.people {
+        match Tile::new(
+            texture_creator,
+            &person,
+            snapshot.zones.get(&person.zone_id),
+        ) {
+            Ok(image) => tiles.push(image),
             Err(e) => log::error!("Failed to render {person:?}: {e}"),
         }
     }
-    images
+    tiles
+}
+
+fn draw_frame(snapshots: &EndpointSnapshots, canvas: &mut Canvas<Window>) -> Result<(), String> {
+    let texture_creator = canvas.texture_creator();
+    canvas.clear();
+    let (width, height) = canvas.output_size()?;
+    // TODO: handle multiple tiles properly
+    for snapshot in snapshots {
+        let tiles = snapshot_to_tiles(&texture_creator, snapshot);
+        let draw_rect = Rect::new(0, 0, width, height);
+        tiles[0].draw(canvas, draw_rect)?;
+    }
+
+    canvas.present();
+    Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+    let endpoint_uris: Vec<tonic::transport::Uri> = get_env_variable("ENDPOINTS").unwrap();
+    let poll_interval: u16 = get_env_variable_with_default("POLL_INTERVAL", 60).unwrap();
 
-    let application = Application::builder()
-        .application_id("clock.Display")
-        .build();
+    let sdl_context = sdl2::init().expect("failed to init SDL");
+    let video_subsystem = sdl_context.video().expect("failed to get video context");
+    let window = video_subsystem
+        .window("Display", 800, 600)
+        .fullscreen_desktop()
+        .build()
+        .expect("failed to build window");
 
-    application.connect_activate(|app| {
-        let endpoint_uris: Arc<Vec<tonic::transport::Uri>> =
-            Arc::new(get_env_variable("ENDPOINTS").unwrap());
-        let poll_interval: Arc<u16> =
-            Arc::new(get_env_variable_with_default("POLL_INTERVAL", 60).unwrap());
+    let mut canvas: Canvas<Window> = window
+        .into_canvas()
+        .build()
+        .expect("failed to build window's canvas");
 
-        let layout = gtk::FlowBox::builder().homogeneous(false).build();
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .title("Display")
-            .fullscreened(true)
-            .hexpand(true)
-            .vexpand(true)
-            .child(&layout)
-            .build();
+    let (snapshot_manager, snapshot_receiver) =
+        SnapshotManager::initialise(Duration::from_secs(poll_interval as u64), &endpoint_uris)
+            .await;
 
-        let (sender, receiver) =
-            MainContext::channel::<Vec<GetPeopleLocationsResponse>>(Priority::default());
-        let main_context = MainContext::default();
-        receiver.attach(
-            None,
-            clone!(@strong layout => @default-return Continue(true), move |responses| {
-                // Clear the grid
-                while let Some(child) = layout.first_child() {
-                    layout.remove(&child);
+    // Start periodically fetching locations in the background.
+    tokio::spawn(snapshot_manager.start_loop());
+
+    let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut latest_snapshots: EndpointSnapshots = vec![];
+    loop {
+        let mut quit = false;
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape) | Some(Keycode::Q),
+                    ..
+                } => {
+                    quit = true;
                 }
-                // Add the new images
-                for response in responses {
-                    for image in snapshot_to_images(response) {
-                        layout.set_hexpand(true);
-                        layout.set_vexpand(true);
-                        layout.append(&image);
-                    }
-                }
-                Continue(true)
-            }),
-        );
-        main_context.spawn_local(clone!(@strong sender, @strong endpoint_uris => async move {
-            loop {
-                let snapshots = get_snapshots(&endpoint_uris).await;
-                match sender.send(snapshots) {
-                    Ok(_) => log::info!("Received response from server"),
-                    Err(e) => log::error!("Failed to send event to UI: {e}"),
-                }
-                tokio::time::sleep(std::time::Duration::from_secs(*poll_interval as u64)).await;
+                _ => {}
             }
-        }));
-        window.show()
-    });
+        }
+        if quit {
+            break;
+        }
 
-    application.run();
+        if let Some(snapshots) = snapshot_receiver.try_iter().last() {
+            latest_snapshots = snapshots;
+        }
+        if let Err(e) = draw_frame(&latest_snapshots, &mut canvas) {
+            log::error!("{}", e);
+        }
+        std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
+    }
 
     Ok(())
 }
