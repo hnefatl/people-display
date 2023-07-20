@@ -11,7 +11,7 @@ mod config;
 mod homeassistant;
 mod photo_manager;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> ! {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
