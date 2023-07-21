@@ -38,6 +38,7 @@ impl Client {
         let headers = Client::make_headers(access_token).map_err(Error::InvalidHeaderValue)?;
         let client = reqwest::Client::builder()
             .default_headers(headers)
+            .timeout(std::time::Duration::from_secs(10))
             .build()
             .map_err(Error::ReqwestError)?;
         Ok(Client {
@@ -50,10 +51,13 @@ impl Client {
     fn make_headers(
         access_token: &str,
     ) -> Result<reqwest::header::HeaderMap, reqwest::header::InvalidHeaderValue> {
+        let mut auth_header: reqwest::header::HeaderValue =
+            format!("Bearer {access_token}").parse()?;
+        auth_header.set_sensitive(true);
+
         let mut headers = reqwest::header::HeaderMap::new();
-        let auth_header = format!("Bearer {access_token}");
         headers.insert(reqwest::header::CONTENT_TYPE, "application/json".parse()?);
-        headers.insert(reqwest::header::AUTHORIZATION, auth_header.parse()?);
+        headers.insert(reqwest::header::AUTHORIZATION, auth_header);
         Ok(headers)
     }
 
