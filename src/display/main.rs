@@ -14,20 +14,40 @@ use lib::env_params::{get_env_variable, get_env_variable_with_default};
 
 mod snapshot_manager;
 mod tile;
-use tile::snapshot_to_tiles;
+use tile::{snapshots_to_tiles, Tile};
 
 fn draw_frame(snapshots: &EndpointSnapshots, canvas: &mut Canvas<Window>) -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
+    canvas.set_draw_color(sdl2::pixels::Color::BLACK);
     canvas.clear();
-    let (width, height) = canvas.output_size()?;
-    // TODO: handle multiple tiles properly
-    for snapshot in snapshots {
-        let tiles = snapshot_to_tiles(&texture_creator, snapshot);
-        let draw_rect = Rect::new(0, 0, width, height);
-        tiles[0].draw(canvas, draw_rect)?;
-    }
+
+    let tiles = snapshots_to_tiles(&texture_creator, snapshots);
+    draw_tiles(&tiles, canvas)?;
 
     canvas.present();
+    Ok(())
+}
+
+fn draw_tiles(tiles: &Vec<Tile>, canvas: &mut Canvas<Window>) -> Result<(), String> {
+    // Make a square grid of tiles. `grid_size` is how many rows/columns we have.
+    let grid_size = ((tiles.len() as f32).sqrt().ceil() as u32).max(1);
+
+    let (output_width, output_height) = canvas.output_size()?;
+    let (tile_width, tile_height) = (output_width / grid_size, output_height / grid_size);
+    for (i, tile) in tiles.iter().enumerate() {
+        let row = i as u32 / grid_size;
+        let column = i as u32 % grid_size;
+
+        let draw_rect = Rect::new(
+            (column * tile_width) as i32,
+            (row * tile_height) as i32,
+            tile_width,
+            tile_height,
+        );
+
+        tile.draw(canvas, draw_rect)?;
+    }
+
     Ok(())
 }
 

@@ -1,4 +1,4 @@
-use crate::snapshot_manager::Snapshot;
+use crate::snapshot_manager::{EndpointSnapshots, Snapshot};
 use lib::clock_pb;
 use sdl2::image::LoadTexture;
 use sdl2::rect::Rect;
@@ -150,4 +150,15 @@ pub fn snapshot_to_tiles<'a, T>(
         }
     }
     tiles
+}
+
+pub fn snapshots_to_tiles<'a, T>(
+    texture_creator: &'a TextureCreator<T>,
+    snapshots: &EndpointSnapshots,
+) -> Vec<Tile<'a>> {
+    snapshots
+        .iter()
+        .map(|s| snapshot_to_tiles(texture_creator, s))
+        .flatten()
+        .collect()
 }
