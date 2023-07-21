@@ -8,12 +8,12 @@ use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 
 use log;
 
-fn get_photo(
+fn get_photo<const P: &'static str>(
     photo_manager: &photo_manager::PhotoManager,
-    entity_id: &homeassistant::EntityId,
+    entity_id: &homeassistant::EntityId<P>,
 ) -> Option<Vec<u8>> {
     // Replace `.` with `_` so that setting a `.png`/`.jpg` extension is easier.
-    let filename = entity_id.replace(".", "_");
+    let filename = entity_id.to_string().replace(".", "_");
     match photo_manager.get_photo(std::path::Path::new(&filename)) {
         Ok(data) => Some(data),
         Err(e) => {
@@ -30,9 +30,9 @@ impl ToProto<clock_pb::Person> for homeassistant::Person {
     fn to_proto(self, photo_manager: &photo_manager::PhotoManager) -> clock_pb::Person {
         clock_pb::Person {
             photo_data: get_photo(photo_manager, &self.id),
-            id: self.id,
-            name: self.name,
-            zone_id: self.zone_id,
+            id: self.id.to_string(),
+            name: self.friendly_name,
+            zone_id: self.zone_id.to_string(),
         }
     }
 }
@@ -40,8 +40,8 @@ impl ToProto<clock_pb::Zone> for homeassistant::Zone {
     fn to_proto(self, photo_manager: &photo_manager::PhotoManager) -> clock_pb::Zone {
         clock_pb::Zone {
             photo_data: get_photo(photo_manager, &self.id),
-            id: self.id,
-            name: self.name,
+            id: self.id.to_string(),
+            name: self.friendly_name,
         }
     }
 }
@@ -72,32 +72,34 @@ impl ClockService for ClockServer {
         _: tonic::Request<GetPeopleLocationsRequest>,
     ) -> tonic::Result<tonic::Response<GetPeopleLocationsResponse>> {
         log::info!("Got request");
-        let result = {
-            let snapshot = homeassistant::get_snapshot(
-                &self.homeassistant_connection_config.host,
-                self.homeassistant_connection_config.port,
-                &self.homeassistant_connection_config.access_token,
-                &self.person_ids,
-            )
-            .await
-            .map_err(|e| {
-                tonic::Status::unavailable(format!("Failed to query home assistant: {e}"))
-            })?;
+        match homeassistant::Client::new(
+            &self.homeassistant_connection_config.access_token,
+            &self.homeassistant_connection_config.endpoint,
+        ) {
+            Ok(client) => {
+                let snapshot = homeassistant::get_snapshot(&client, &self.person_ids).await;
 
-            Ok(tonic::Response::new(GetPeopleLocationsResponse {
-                people: snapshot
-                    .people
-                    .into_iter()
-                    .map(|p| p.to_proto(&self.photo_manager))
-                    .collect(),
-                zones: snapshot
-                    .zones
-                    .into_values()
-                    .map(|z| z.to_proto(&self.photo_manager))
-                    .collect(),
-            }))
-        };
-        log::trace!("Responding with: {result:?}");
-        result
+                let result = Ok(tonic::Response::new(GetPeopleLocationsResponse {
+                    people: snapshot
+                        .people
+                        .into_iter()
+                        .map(|p| p.to_proto(&self.photo_manager))
+                        .collect(),
+                    zones: snapshot
+                        .zones
+                        .into_values()
+                        .map(|z| z.to_proto(&self.photo_manager))
+                        .collect(),
+                }));
+
+                log::trace!("Responding with: {result:?}");
+                return result;
+            }
+            Err(e) => {
+                let status = tonic::Status::internal(e.to_string());
+                log::error!("Responding with: {e}");
+                return Err(status);
+            }
+        }
     }
 }

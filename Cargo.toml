@@ -16,9 +16,10 @@ name = "exporter"
 path = "src/exporter/main.rs"
 
 [dependencies]
-# The current 0.2 release has a broken `serde` build.
-hass-rs = { git = "https://github.com/danrusei/hass-rs", rev="a51d02c3202568076b6bc093466ad0277a812946", default-features = false, features = ["tokio-runtime"] }
 tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = {version = "0.11", features = ["json"]}
 tonic = "0.9.2"
 prost = "0.11"
 log = "0.4.19"

@@ -1,5 +1,6 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
+#![feature(adt_const_params)]
 
 use env_logger;
 use log;
