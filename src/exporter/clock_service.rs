@@ -8,7 +8,7 @@ use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 
 use log;
 
-fn get_photo<const P: &'static str>(
+fn get_photo<const P: homeassistant::PrefixType>(
     photo_manager: &photo_manager::PhotoManager,
     entity_id: &homeassistant::EntityId<P>,
 ) -> Option<Vec<u8>> {

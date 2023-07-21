@@ -12,7 +12,8 @@ use lib::env_params;
 pub struct EntityId<const PREFIX: &'static str> {
     suffix: String,
 }
-impl<const PREFIX: &'static str> EntityId<PREFIX> {
+pub type PrefixType = &'static str;
+impl<const PREFIX: PrefixType> EntityId<PREFIX> {
     pub fn new<S: ToString>(value: &S) -> Self {
         EntityId {
             // Remove any existing prefix: turn either `home` or `zone.home` to `zone.home`.
@@ -20,12 +21,12 @@ impl<const PREFIX: &'static str> EntityId<PREFIX> {
         }
     }
 }
-impl<const P: &'static str> std::fmt::Display for EntityId<P> {
+impl<const P: PrefixType> std::fmt::Display for EntityId<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{P}{}", self.suffix))
     }
 }
-impl<'de, const P: &'static str> serde::Deserialize<'de> for EntityId<P> {
+impl<'de, const P: PrefixType> serde::Deserialize<'de> for EntityId<P> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -54,7 +55,7 @@ impl<'de, const P: &'static str> serde::Deserialize<'de> for EntityId<P> {
     }
 }
 
-impl<const P: &'static str> env_params::ConfigParamFromEnv for EntityId<P> {
+impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityId<P> {
     fn parse(val: &str) -> Result<Self, String> {
         Ok(EntityId::new(&val.to_string()))
     }
