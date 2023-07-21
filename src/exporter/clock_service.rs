@@ -2,6 +2,7 @@ use crate::config;
 use crate::homeassistant;
 use crate::photo_manager;
 
+use homeassistant::Entity;
 use lib::clock_pb;
 use lib::clock_pb::clock_service_server::{ClockService, ClockServiceServer};
 use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
@@ -31,7 +32,7 @@ impl ToProto<clock_pb::Person> for homeassistant::Person {
         clock_pb::Person {
             photo_data: get_photo(photo_manager, &self.id),
             id: self.id.to_string(),
-            name: self.friendly_name,
+            name: self.get_friendly_name(),
             zone_id: self.zone_id.to_string(),
         }
     }
@@ -41,7 +42,7 @@ impl ToProto<clock_pb::Zone> for homeassistant::Zone {
         clock_pb::Zone {
             photo_data: get_photo(photo_manager, &self.id),
             id: self.id.to_string(),
-            name: self.friendly_name,
+            name: self.get_friendly_name(),
         }
     }
 }
