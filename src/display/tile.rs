@@ -39,7 +39,6 @@ fn scale_inner_to_outer(outer: Rect, inner: Rect) -> Rect {
 }
 
 pub struct Tile<'a> {
-    person_name: Option<String>,
     person_texture: Option<Texture<'a>>,
     background_texture: Texture<'a>,
 }
@@ -72,7 +71,6 @@ impl<'a> Tile<'a> {
         };
 
         Ok(Tile {
-            person_name: person.name.clone(),
             person_texture: person_texture,
             background_texture,
         })
@@ -90,16 +88,14 @@ impl<'a> Tile<'a> {
         scaled_background_src.center_on(background_rect.center());
         canvas.copy(&self.background_texture, scaled_background_src, dest)?;
 
-        let mut person_dest: Option<Rect> = None;
         if let Some(person_texture) = &self.person_texture {
-            person_dest = Some(self.draw_person(person_texture, canvas, dest)?);
+            Self::draw_person(person_texture, canvas, dest)?;
         }
 
         Ok(())
     }
 
     pub fn draw_person<T: sdl2::render::RenderTarget>(
-        &self,
         person_texture: &Texture,
         canvas: &mut Canvas<T>,
         dest: Rect,
