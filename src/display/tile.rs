@@ -16,27 +16,25 @@ fn get_texture_rect(texture: &Texture) -> Rect {
     Rect::new(0, 0, width.into(), height.into())
 }
 
-/// Produce a rect with the same aspect ratio as `dest`, entirely contained within `image`.
-/// The intent is to produce a scaled but not stretched background image that can be
-/// rendered to fill `dest`, potentially cropping out parts of the image.
-fn scale_image_to_dest(image: Rect, dest: Rect) -> Rect {
-    let image_aspect_ratio = image.width() as f32 / image.height() as f32;
-    let dest_aspect_ratio = dest.width() as f32 / dest.height() as f32;
+/// Produce a rect with the same aspect ratio as `inner`, entirely contained within `outer`.
+/// The intent is to produce a scaled but not stretched image that can be rendered to fill
+/// `inner`, potentially cropping out parts of `outer`.
+/// The resulting rect has the same top-left corner as `inner`.
+fn scale_inner_to_outer(outer: Rect, inner: Rect) -> Rect {
+    let image_aspect_ratio = outer.width() as f32 / outer.height() as f32;
+    let dest_aspect_ratio = inner.width() as f32 / inner.height() as f32;
 
     // Make a new dest-sized box aligned with the image's top left corner.
-    let mut result = Rect::new(0, 0, dest.width(), dest.height());
+    let mut result = inner.clone();
     // Will we have "black bars" at the top or side, if we scaled the two rects to the same size?
     if image_aspect_ratio > dest_aspect_ratio {
-        result.set_height(image.height());
+        result.set_height(outer.height());
         // Fix the height, maintaining the original aspect ratio.
-        result.set_width((image.height() as f32 * dest_aspect_ratio) as u32);
+        result.set_width((outer.height() as f32 * dest_aspect_ratio) as u32);
     } else {
-        result.set_width(image.width());
-        result.set_height((image.width() as f32 / dest_aspect_ratio) as u32);
+        result.set_width(outer.width());
+        result.set_height((outer.width() as f32 / dest_aspect_ratio) as u32);
     }
-
-    // Move to the centre so we crop off both sides evenly, not always the right side.
-    result.center_on(image.center());
     return result;
 }
 
@@ -80,24 +78,48 @@ impl<'a> Tile<'a> {
         })
     }
 
-    pub fn draw<T>(&self, canvas: &mut Canvas<T>, dest: Rect) -> Result<(), String>
-    where
-        T: sdl2::render::RenderTarget,
-    {
-        // Scale+crop the photo to fit within the destination without stretching.
+    pub fn draw<T: sdl2::render::RenderTarget>(
+        &self,
+        canvas: &mut Canvas<T>,
+        dest: Rect,
+    ) -> Result<(), String> {
         let background_rect = get_texture_rect(&self.background_texture);
-        let scaled_background_src = scale_image_to_dest(background_rect, dest);
+        // Scale+crop the photo to fit within the destination without stretching.
+        let mut scaled_background_src = scale_inner_to_outer(background_rect, dest);
+        // Centre the scaled source on our image.
+        scaled_background_src.center_on(background_rect.center());
         canvas.copy(&self.background_texture, scaled_background_src, dest)?;
 
-        const PERSON_RATIO: u32 = 4;
+        let mut person_dest: Option<Rect> = None;
         if let Some(person_texture) = &self.person_texture {
-            let person_size =
-                std::cmp::min(dest.width() / PERSON_RATIO, dest.height() / PERSON_RATIO);
-            let mut person_rect = Rect::new(0, 0, person_size, person_size);
-            person_rect.center_on(dest.center());
-            canvas.copy(&person_texture, None, person_rect)?;
+            person_dest = Some(self.draw_person(person_texture, canvas, dest)?);
         }
+
         Ok(())
+    }
+
+    pub fn draw_person<T: sdl2::render::RenderTarget>(
+        &self,
+        person_texture: &Texture,
+        canvas: &mut Canvas<T>,
+        dest: Rect,
+    ) -> Result<Rect, String> {
+        /// What ratio of the destination rect should be allocated to the person's photo.
+        const PERSON_RATIO: u32 = 4;
+        let scaled_dest = Rect::new(
+            0,
+            0,
+            dest.width() / PERSON_RATIO,
+            dest.height() / PERSON_RATIO,
+        );
+        let person_rect = get_texture_rect(person_texture);
+        // Scale+crop the destination to fit the photo without stretching.
+        let mut person_dest = scale_inner_to_outer(scaled_dest, person_rect);
+        // Centre the output in the overall destination rect.
+        person_dest.center_on(dest.center());
+
+        canvas.copy(&person_texture, None, person_dest)?;
+        Ok(person_dest)
     }
 }
 
