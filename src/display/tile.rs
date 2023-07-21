@@ -11,6 +11,35 @@ fn bytes_to_texture<'a, T>(
     texture_creator.load_texture_bytes(bytes)
 }
 
+fn get_texture_rect(texture: &Texture) -> Rect {
+    let sdl2::render::TextureQuery { width, height, .. } = texture.query();
+    Rect::new(0, 0, width.into(), height.into())
+}
+
+/// Produce a rect with the same aspect ratio as `dest`, entirely contained within `image`.
+/// The intent is to produce a scaled but not stretched background image that can be
+/// rendered to fill `dest`, potentially cropping out parts of the image.
+fn scale_image_to_dest(image: Rect, dest: Rect) -> Rect {
+    let image_aspect_ratio = image.width() as f32 / image.height() as f32;
+    let dest_aspect_ratio = dest.width() as f32 / dest.height() as f32;
+
+    // Make a new dest-sized box aligned with the image's top left corner.
+    let mut result = Rect::new(0, 0, dest.width(), dest.height());
+    // Will we have "black bars" at the top or side, if we scaled the two rects to the same size?
+    if image_aspect_ratio > dest_aspect_ratio {
+        result.set_height(image.height());
+        // Fix the height, maintaining the original aspect ratio.
+        result.set_width((image.height() as f32 * dest_aspect_ratio) as u32);
+    } else {
+        result.set_width(image.width());
+        result.set_height((image.width() as f32 / dest_aspect_ratio) as u32);
+    }
+
+    // Move to the centre so we crop off both sides evenly, not always the right side.
+    result.center_on(image.center());
+    return result;
+}
+
 pub struct Tile<'a> {
     person_name: Option<String>,
     person_texture: Option<Texture<'a>>,
@@ -55,9 +84,12 @@ impl<'a> Tile<'a> {
     where
         T: sdl2::render::RenderTarget,
     {
-        // TODO: sort scaling/cropping
+        // Scale+crop the photo to fit within the destination without stretching.
+        let background_rect = get_texture_rect(&self.background_texture);
+        let scaled_background_src = scale_image_to_dest(background_rect, dest);
+        canvas.copy(&self.background_texture, scaled_background_src, dest)?;
+
         const PERSON_RATIO: u32 = 4;
-        canvas.copy(&self.background_texture, None, dest)?;
         if let Some(person_texture) = &self.person_texture {
             let person_size =
                 std::cmp::min(dest.width() / PERSON_RATIO, dest.height() / PERSON_RATIO);

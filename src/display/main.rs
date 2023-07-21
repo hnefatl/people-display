@@ -74,7 +74,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sdl_context = sdl2::init().expect("failed to init SDL");
     let video_subsystem = sdl_context.video().expect("failed to get video context");
     let window = video_subsystem
-        .window("Display", 800, 600)
+        .window("Display", 720, 480)
+        .resizable()
         .fullscreen_desktop()
         .build()
         .expect("failed to build window");
