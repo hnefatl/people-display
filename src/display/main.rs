@@ -31,6 +31,40 @@ fn draw_frame(snapshots: &EndpointSnapshots, canvas: &mut Canvas<Window>) -> Res
     Ok(())
 }
 
+fn main_loop(
+    canvas: &mut Canvas<Window>,
+    event_pump: &mut sdl2::EventPump,
+    snapshot_receiver: std::sync::mpsc::Receiver<EndpointSnapshots>,
+) {
+    let mut latest_snapshots: EndpointSnapshots = vec![];
+    loop {
+        let mut quit = false;
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape) | Some(Keycode::Q),
+                    ..
+                } => {
+                    quit = true;
+                }
+                _ => {}
+            }
+        }
+        if quit {
+            break;
+        }
+
+        if let Some(snapshots) = snapshot_receiver.try_iter().last() {
+            latest_snapshots = snapshots;
+        }
+        if let Err(e) = draw_frame(&latest_snapshots, canvas) {
+            log::error!("{}", e);
+        }
+        std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
+    }
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
@@ -55,36 +89,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await;
 
     // Start periodically fetching locations in the background.
-    tokio::spawn(snapshot_manager.start_loop());
+    let snapshot_manager_handle = tokio::spawn(snapshot_manager.start_loop());
 
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut latest_snapshots: EndpointSnapshots = vec![];
-    loop {
-        let mut quit = false;
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape) | Some(Keycode::Q),
-                    ..
-                } => {
-                    quit = true;
-                }
-                _ => {}
-            }
-        }
-        if quit {
-            break;
-        }
+    main_loop(&mut canvas, &mut event_pump, snapshot_receiver);
 
-        if let Some(snapshots) = snapshot_receiver.try_iter().last() {
-            latest_snapshots = snapshots;
-        }
-        if let Err(e) = draw_frame(&latest_snapshots, &mut canvas) {
-            log::error!("{}", e);
-        }
-        std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
-    }
+    snapshot_manager_handle.abort();
 
     Ok(())
 }
