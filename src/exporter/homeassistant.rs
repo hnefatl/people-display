@@ -31,27 +31,8 @@ impl<'de, const P: PrefixType> serde::Deserialize<'de> for EntityId<P> {
     where
         D: serde::Deserializer<'de>,
     {
-        // Buncha random stuff to be able to parse a generic string? Not sure why this isn't
-        // made public from the serde module.
-        struct StringVisitor;
-        impl<'de> serde::de::Visitor<'de> for StringVisitor {
-            type Value = String;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("string")
-            }
-
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(s.to_string())
-            }
-        }
-
-        deserializer
-            .deserialize_string(StringVisitor)
-            .map(|s| EntityId::new(&s))
+        let s: &str = serde::Deserialize::deserialize(deserializer)?;
+        Ok(EntityId::new(&s))
     }
 }
 
