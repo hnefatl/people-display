@@ -63,7 +63,10 @@ impl<'a> Tile<'a> {
         let background_texture = match zone_texture {
             Some(t) => t,
             None => {
-                log::info!("Using blank texture for {person:?}, no zone photo data provided.");
+                log::trace!(
+                    "Using blank texture for {}, no zone photo data provided.",
+                    &person.id
+                );
                 texture_creator
                     .create_texture_static(sdl2::pixels::PixelFormatEnum::RGB24, 100, 100)
                     .map_err(|e| format!("Unable to create blank texture: {e}"))?

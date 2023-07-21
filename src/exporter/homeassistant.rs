@@ -35,7 +35,7 @@ pub struct Client {
 }
 impl Client {
     pub fn new(access_token: &str, endpoint: &str) -> Result<Self, Error> {
-        let headers = Client::_make_headers(access_token).map_err(Error::InvalidHeaderValue)?;
+        let headers = Client::make_headers(access_token).map_err(Error::InvalidHeaderValue)?;
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .build()
@@ -47,7 +47,7 @@ impl Client {
         })
     }
 
-    fn _make_headers(
+    fn make_headers(
         access_token: &str,
     ) -> Result<reqwest::header::HeaderMap, reqwest::header::InvalidHeaderValue> {
         let mut headers = reqwest::header::HeaderMap::new();
@@ -57,20 +57,41 @@ impl Client {
         Ok(headers)
     }
 
-    pub async fn get_entity<T: Entity>(&self, id: &T::Id) -> Result<T, Error> {
-        let url = self
-            .server_endpoint
-            .join("/api/states/")
-            .and_then(|u| u.join(&id.to_string()))
-            .map_err(|e| Error::UrlParseError(e.to_string()))?;
-        let response = self
-            .client
+    fn make_url(&self, path: &str) -> reqwest::Url {
+        let mut url = self.server_endpoint.clone();
+        url.set_path(path);
+        return url;
+    }
+
+    async fn get(&self, url: &reqwest::Url) -> Result<reqwest::Response, Error> {
+        self.client
             .get(url.clone())
             .send()
             .await
-            .map_err(Error::ReqwestError)?;
+            .map_err(|e| Error::ReqwestError(e))
+    }
+
+    pub async fn get_entity<T: Entity>(&self, id: &T::Id) -> Result<T, Error> {
+        // Risk of parameter injection? Nah, no way.
+        let url = self.make_url(&format!("/api/states/{}", &id.to_string()));
+        let response = self.get(&url).await?;
         let body = response.text().await.map_err(Error::InvalidResponseBody)?;
         serde_json::from_str(&body).map_err(|e| Error::JsonDecodeError(url, e, body))
+    }
+
+    pub async fn get_photo(&self, person: &Person) -> Result<Option<Vec<u8>>, Error> {
+        match person.get_entity_picture_path() {
+            Some(entity_picture_path) => {
+                let url = self.make_url(&entity_picture_path);
+                let response = self.get(&url).await?;
+                let bytes = response
+                    .bytes()
+                    .await
+                    .map_err(|e| Error::InvalidResponseBody(e))?;
+                Ok(Some(bytes.into()))
+            }
+            None => Ok(None),
+        }
     }
 }
 

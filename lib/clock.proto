@@ -4,7 +4,6 @@ package clock;
 
 message Person {
     string id = 1;
-    optional string name = 2;
     string zone_id = 3;
 
     // The raw contents of an image file, e.g. .png/.jpg.
@@ -12,7 +11,6 @@ message Person {
 }
 message Zone {
     string id = 1;
-    optional string name = 2;
     optional bytes photo_data = 3;
 }
 

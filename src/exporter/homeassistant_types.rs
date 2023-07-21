@@ -41,7 +41,7 @@ impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityId<P> {
 pub type PersonId = EntityId<"person.">;
 pub type ZoneId = EntityId<"zone.">;
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum AttributeValue {
     StringValue(String),
@@ -53,7 +53,7 @@ pub enum AttributeValue {
 }
 pub type AttributeMap = std::collections::HashMap<String, AttributeValue>;
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct Person {
     #[serde(rename = "entity_id")]
     pub id: PersonId,
@@ -63,7 +63,15 @@ pub struct Person {
     #[serde(default)]
     pub attributes: AttributeMap,
 }
-#[derive(serde::Deserialize, Debug)]
+impl Person {
+    pub fn get_entity_picture_path(&self) -> Option<String> {
+        match self.attributes.get("entity_picture") {
+            Some(AttributeValue::StringValue(s)) => Some(s.clone()),
+            _ => None,
+        }
+    }
+}
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct Zone {
     #[serde(rename = "entity_id")]
     pub id: ZoneId,
@@ -74,24 +82,10 @@ pub struct Zone {
 /// Generic "thing that can have state fetched" trait, for tying together entity types and their IDs.
 pub trait Entity: for<'a> serde::Deserialize<'a> {
     type Id: std::string::ToString;
-
-    fn get_attributes<'a>(&'a self) -> &'a AttributeMap;
-    fn get_friendly_name(&self) -> Option<String> {
-        match self.get_attributes().get("friendly_name")? {
-            AttributeValue::StringValue(friendly_name) => Some(friendly_name.clone()),
-            _ => None,
-        }
-    }
 }
 impl Entity for Person {
     type Id = PersonId;
-    fn get_attributes<'a>(&'a self) -> &'a AttributeMap {
-        &self.attributes
-    }
 }
 impl Entity for Zone {
     type Id = ZoneId;
-    fn get_attributes<'a>(&'a self) -> &'a AttributeMap {
-        &self.attributes
-    }
 }
