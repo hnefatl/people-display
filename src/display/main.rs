@@ -5,7 +5,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::rect::Rect;
 use sdl2::video::Window;
 use snapshot_manager::{EndpointSnapshots, SnapshotManager};
-use std::{path::PathBuf, time::Duration};
+use std::time::Duration;
 use tokio;
 
 use sdl2::render::Canvas;
@@ -16,17 +16,13 @@ mod snapshot_manager;
 mod tile;
 use tile::snapshot_to_tiles;
 
-fn draw_frame(
-    snapshots: &EndpointSnapshots,
-    font: &sdl2::ttf::Font,
-    canvas: &mut Canvas<Window>,
-) -> Result<(), String> {
+fn draw_frame(snapshots: &EndpointSnapshots, canvas: &mut Canvas<Window>) -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
     canvas.clear();
     let (width, height) = canvas.output_size()?;
     // TODO: handle multiple tiles properly
     for snapshot in snapshots {
-        let tiles = snapshot_to_tiles(&texture_creator, font, snapshot);
+        let tiles = snapshot_to_tiles(&texture_creator, snapshot);
         let draw_rect = Rect::new(0, 0, width, height);
         tiles[0].draw(canvas, draw_rect)?;
     }
@@ -37,7 +33,6 @@ fn draw_frame(
 
 fn main_loop(
     canvas: &mut Canvas<Window>,
-    font: &sdl2::ttf::Font,
     event_pump: &mut sdl2::EventPump,
     snapshot_receiver: std::sync::mpsc::Receiver<EndpointSnapshots>,
 ) {
@@ -63,7 +58,7 @@ fn main_loop(
         if let Some(snapshots) = snapshot_receiver.try_iter().last() {
             latest_snapshots = snapshots;
         }
-        if let Err(e) = draw_frame(&latest_snapshots, font, canvas) {
+        if let Err(e) = draw_frame(&latest_snapshots, canvas) {
             log::error!("{}", e);
         }
         std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
@@ -75,15 +70,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let endpoint_uris: Vec<tonic::transport::Uri> = get_env_variable("ENDPOINTS").unwrap();
     let poll_interval: u16 = get_env_variable_with_default("POLL_INTERVAL", 60).unwrap();
-    let font_file: PathBuf = get_env_variable_with_default(
-        "FONT_FILE",
-        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf".into(),
-    )
-    .unwrap();
 
     let sdl_context = sdl2::init().expect("failed to init SDL");
-    let sdl_font_context = sdl2::ttf::init().expect("failed to init SDL ttf");
-
     let video_subsystem = sdl_context.video().expect("failed to get video context");
     let window = video_subsystem
         .window("Display", 720, 480)
@@ -97,11 +85,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .expect("failed to build window's canvas");
 
-    // Default to a high font size, we can always scale it down.
-    let font = sdl_font_context
-        .load_font(font_file, 128)
-        .expect("failed to load font");
-
     let (snapshot_manager, snapshot_receiver) =
         SnapshotManager::initialise(Duration::from_secs(poll_interval as u64), &endpoint_uris)
             .await;
@@ -110,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let snapshot_manager_handle = tokio::spawn(snapshot_manager.start_loop());
 
     let mut event_pump = sdl_context.event_pump().unwrap();
-    main_loop(&mut canvas, &font, &mut event_pump, snapshot_receiver);
+    main_loop(&mut canvas, &mut event_pump, snapshot_receiver);
 
     snapshot_manager_handle.abort();
 

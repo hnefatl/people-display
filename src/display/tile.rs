@@ -3,8 +3,6 @@ use lib::clock_pb;
 use sdl2::image::LoadTexture;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture, TextureCreator};
-use sdl2::sys::SDL_UnlockMutex;
-use sdl2::ttf::Font;
 
 fn bytes_to_texture<'a, T>(
     texture_creator: &'a TextureCreator<T>,
@@ -41,14 +39,13 @@ fn scale_inner_to_outer(outer: Rect, inner: Rect) -> Rect {
 }
 
 pub struct Tile<'a> {
+    person_name: Option<String>,
     person_texture: Option<Texture<'a>>,
     background_texture: Texture<'a>,
-    name_texture: Option<Texture<'a>>,
 }
 impl<'a> Tile<'a> {
     pub fn new<T>(
         texture_creator: &'a TextureCreator<T>,
-        font: &Font,
         person: &clock_pb::Person,
         zone: Option<&clock_pb::Zone>,
     ) -> Result<Self, String> {
@@ -57,12 +54,12 @@ impl<'a> Tile<'a> {
             .as_ref()
             .map(|b| bytes_to_texture(texture_creator, &b))
             .transpose()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("{e}"))?;
         let zone_texture = zone
             .and_then(|z| z.photo_data.as_ref())
             .map(|b| bytes_to_texture(texture_creator, &b))
             .transpose()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("{e}"))?;
 
         let background_texture = match zone_texture {
             Some(t) => t,
@@ -74,23 +71,10 @@ impl<'a> Tile<'a> {
             }
         };
 
-        let mut name_texture = None;
-        if let Some(name) = &person.name {
-            let name_surface = font
-                .render(&name)
-                .solid(sdl2::pixels::Color::YELLOW)
-                .map_err(|e| e.to_string())?;
-            name_texture = Some(
-                name_surface
-                    .as_texture(texture_creator)
-                    .map_err(|e| e.to_string())?,
-            );
-        }
-
         Ok(Tile {
+            person_name: person.name.clone(),
             person_texture: person_texture,
             background_texture,
-            name_texture,
         })
     }
 
@@ -106,20 +90,16 @@ impl<'a> Tile<'a> {
         scaled_background_src.center_on(background_rect.center());
         canvas.copy(&self.background_texture, scaled_background_src, dest)?;
 
-        let mut person_dest = None;
+        let mut person_dest: Option<Rect> = None;
         if let Some(person_texture) = &self.person_texture {
-            person_dest = Some(Self::draw_person(person_texture, canvas, dest)?);
-        }
-
-        if let Some(name_texture) = &self.name_texture {
-            let name_dest = dest;
-            Self::draw_name(name_texture, canvas, name_dest)?;
+            person_dest = Some(self.draw_person(person_texture, canvas, dest)?);
         }
 
         Ok(())
     }
 
     pub fn draw_person<T: sdl2::render::RenderTarget>(
+        &self,
         person_texture: &Texture,
         canvas: &mut Canvas<T>,
         dest: Rect,
@@ -141,26 +121,16 @@ impl<'a> Tile<'a> {
         canvas.copy(&person_texture, None, person_dest)?;
         Ok(person_dest)
     }
-    pub fn draw_name<T: sdl2::render::RenderTarget>(
-        name_texture: &Texture,
-        canvas: &mut Canvas<T>,
-        dest: Rect,
-    ) -> Result<(), String> {
-        canvas.copy(name_texture, None, dest)?;
-        Ok(())
-    }
 }
 
 pub fn snapshot_to_tiles<'a, T>(
     texture_creator: &'a TextureCreator<T>,
-    font: &Font,
     snapshot: &Snapshot,
 ) -> Vec<Tile<'a>> {
     let mut tiles = vec![];
     for person in &snapshot.people {
         match Tile::new(
             texture_creator,
-            font,
             &person,
             snapshot.zones.get(&person.zone_id),
         ) {
