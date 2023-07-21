@@ -10,6 +10,7 @@ use tokio;
 mod clock_service;
 mod config;
 mod homeassistant;
+mod homeassistant_types;
 mod photo_manager;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
