@@ -32,11 +32,17 @@ fn draw_tiles(tiles: &Vec<Tile>, canvas: &mut Canvas<Window>) -> Result<(), Stri
     // Make a square grid of tiles. `grid_size` is how many rows/columns we have.
     let grid_size = ((tiles.len() as f32).sqrt().ceil() as u32).max(1);
 
+    let num_columns = grid_size;
+    // Sneaky trick: with e.g. 2 tiles, we don't want 2 rows and columns, it wastes half the screen.
+    // Instead, pick the number of columns according to a square, but only use as many rows as
+    // necessary to fit all the tiles with that many columns.
+    let num_rows = ((tiles.len() as f32 / num_columns as f32).ceil() as u32).max(1);
+
     let (output_width, output_height) = canvas.output_size()?;
-    let (tile_width, tile_height) = (output_width / grid_size, output_height / grid_size);
+    let (tile_width, tile_height) = (output_width / num_columns, output_height / num_rows);
     for (i, tile) in tiles.iter().enumerate() {
-        let row = i as u32 / grid_size;
-        let column = i as u32 % grid_size;
+        let row = i as u32 / num_columns;
+        let column = i as u32 % num_columns;
 
         let draw_rect = Rect::new(
             (column * tile_width) as i32,
