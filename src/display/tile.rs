@@ -40,7 +40,7 @@ fn scale_inner_to_outer(outer: Rect, inner: Rect) -> Rect {
 
 pub struct Tile<'a> {
     person_texture: Option<Texture<'a>>,
-    background_texture: Texture<'a>,
+    background_texture: Option<Texture<'a>>,
 }
 impl<'a> Tile<'a> {
     pub fn new<T>(
@@ -53,29 +53,23 @@ impl<'a> Tile<'a> {
             .as_ref()
             .map(|b| bytes_to_texture(texture_creator, &b))
             .transpose()
-            .map_err(|e| format!("{e}"))?;
+            .map_err(|e| e.to_string())?;
         let zone_texture = zone
             .and_then(|z| z.photo_data.as_ref())
             .map(|b| bytes_to_texture(texture_creator, &b))
             .transpose()
-            .map_err(|e| format!("{e}"))?;
+            .map_err(|e| e.to_string())?;
 
-        let background_texture = match zone_texture {
-            Some(t) => t,
-            None => {
-                log::trace!(
-                    "Using blank texture for {}, no zone photo data provided.",
-                    &person.id
-                );
-                texture_creator
-                    .create_texture_static(sdl2::pixels::PixelFormatEnum::RGB24, 100, 100)
-                    .map_err(|e| format!("Unable to create blank texture: {e}"))?
-            }
-        };
+        if zone_texture.is_none() {
+            log::trace!(
+                "Using blank texture for {}, no zone photo data provided.",
+                &person.id
+            );
+        }
 
         Ok(Tile {
-            person_texture: person_texture,
-            background_texture,
+            person_texture,
+            background_texture: zone_texture,
         })
     }
 
@@ -84,15 +78,33 @@ impl<'a> Tile<'a> {
         canvas: &mut Canvas<T>,
         dest: Rect,
     ) -> Result<(), String> {
-        let background_rect = get_texture_rect(&self.background_texture);
-        // Scale+crop the photo to fit within the destination without stretching.
-        let mut scaled_background_src = scale_inner_to_outer(background_rect, dest);
-        // Centre the scaled source on our image.
-        scaled_background_src.center_on(background_rect.center());
-        canvas.copy(&self.background_texture, scaled_background_src, dest)?;
+        Self::draw_background(&self.background_texture, canvas, dest)?;
 
         if let Some(person_texture) = &self.person_texture {
             Self::draw_person(person_texture, canvas, dest)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn draw_background<T: sdl2::render::RenderTarget>(
+        background_texture: &Option<Texture>,
+        canvas: &mut Canvas<T>,
+        dest: Rect,
+    ) -> Result<(), String> {
+        match background_texture {
+            Some(texture) => {
+                let background_rect = get_texture_rect(texture);
+                // Scale+crop the photo to fit within the destination without stretching.
+                let mut scaled_background_src = scale_inner_to_outer(background_rect, dest);
+                // Centre the scaled source on our image.
+                scaled_background_src.center_on(background_rect.center());
+                canvas.copy(texture, scaled_background_src, dest)?;
+            }
+            None => {
+                canvas.set_draw_color(sdl2::pixels::Color::BLACK);
+                canvas.fill_rect(dest)?;
+            }
         }
 
         Ok(())
