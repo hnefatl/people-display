@@ -25,14 +25,11 @@ RUN cargo build --locked --release --bin exporter
 
 FROM rust:1-slim-bookworm as runtime
 WORKDIR /app
-# Maybe only needed for build?
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt update && apt-get --no-install-recommends install -y \
     libssl-dev
-    #libsdl2-dev \
-    #libsdl2-image-dev
 
 COPY --from=builder /app/target/release/exporter /app/exporter
 ENTRYPOINT ["/app/exporter"]
