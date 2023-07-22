@@ -1,0 +1,6 @@
+# We're using unstable features, so need nightly.
+# Just specifing `+nightly` to cargo will result in unstable builds, so pin a specific
+# nightly version here.
+[toolchain]
+channel = "nightly-2023-07-21"
+profile = "minimal"
