@@ -3,6 +3,7 @@
 - Features:
   - [x] Multiple display tiles
   - [ ] Encryption/authentication from display->exporter.
+  - [ ] Secrets via environment variable file, rather than plaintext.
   - [ ] Privacy toggle
   - [ ] Privacy zones (exclude subzones of a larger zone)
   - [ ] Documentation
