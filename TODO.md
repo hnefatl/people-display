@@ -1,0 +1,20 @@
+# Features remaining
+
+- Features:
+  - [x] Multiple display tiles
+  - [ ] Privacy toggle
+  - [ ] Privacy zones (exclude subzones of a larger zone)
+  - [ ] Documentation
+- Deployment:
+  - [x] Docker container for exporter
+  - [ ] Docker build deployment pipeline
+  - [ ] Raspberry-pi-compatible linux image for display
+  - [ ] Wireguard configured, wifi networks pre-seeded
+  - [ ] Automatic(?) display update procedures
+- Testing
+  - [ ] Hardware assembled
+  - [ ] Own setup configured
+- Container
+  - [ ] Modelled
+  - [ ] Printed
+
