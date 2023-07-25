@@ -10,7 +10,7 @@ use tokio;
 
 use sdl2::render::Canvas;
 
-use lib::env_params::{get_env_variable, get_env_variable_with_default};
+use lib::env_params::{get_env_variable, get_env_variable_with_default, get_env_variable_from_file};
 
 mod snapshot_manager;
 mod tile;
@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let endpoint_uris: Vec<tonic::transport::Uri> = get_env_variable("ENDPOINTS").unwrap();
     let poll_interval: u16 = get_env_variable_with_default("POLL_INTERVAL", 60).unwrap();
-    let password: secstr::SecStr = get_env_variable("PASSWORD").unwrap();
+    let password: secstr::SecStr = get_env_variable_from_file("PASSWORD_FILE").unwrap();
 
     let sdl_context = sdl2::init().expect("failed to init SDL");
     let video_subsystem = sdl_context.video().expect("failed to get video context");

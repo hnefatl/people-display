@@ -47,6 +47,7 @@ where
 {
     get_optional_env_variable(key)?.ok_or(format!("Environment variable '{key}' not set."))
 }
+
 pub fn get_optional_env_variable<T>(key: &str) -> Result<Option<T>, String>
 where
     T: ConfigParamFromEnv,
@@ -62,4 +63,17 @@ where
     T: ConfigParamFromEnv,
 {
     get_optional_env_variable(key).map(|v| v.unwrap_or(default))
+}
+pub fn get_env_variable_from_file<T>(key: &str) -> Result<T, String>
+where
+    T: ConfigParamFromEnv,
+{
+    assert!(key.ends_with("_FILE"));
+    let key_without_file = key.trim_end_matches("_FILE");
+    let key = format!("{key_without_file}_FILE");
+
+    let path: String = get_env_variable(&key)?;
+    let contents =
+        std::fs::read_to_string(&path).map_err(|e| format!("When opening {path}: {e}"))?;
+    ConfigParamFromEnv::parse(&contents.trim())
 }

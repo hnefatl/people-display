@@ -2,5 +2,7 @@
 .vscode
 # Contains PII photos of zones/people
 photos/
+# Contains API secrets passed in via file.
+secrets/
 # Contains API secret, shouldn't be committed.
 run_*.sh
