@@ -96,6 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let endpoint_uris: Vec<tonic::transport::Uri> = get_env_variable("ENDPOINTS").unwrap();
     let poll_interval: u16 = get_env_variable_with_default("POLL_INTERVAL", 60).unwrap();
+    let password: secstr::SecStr = get_env_variable("PASSWORD").unwrap();
 
     let sdl_context = sdl2::init().expect("failed to init SDL");
     let video_subsystem = sdl_context.video().expect("failed to get video context");
@@ -112,9 +113,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .expect("failed to build window's canvas");
 
-    let (snapshot_manager, snapshot_receiver) =
-        SnapshotManager::initialise(Duration::from_secs(poll_interval as u64), &endpoint_uris)
-            .await;
+    let (snapshot_manager, snapshot_receiver) = SnapshotManager::initialise(
+        Duration::from_secs(poll_interval as u64),
+        password,
+        &endpoint_uris,
+    )
+    .await;
 
     // Start periodically fetching locations in the background.
     let snapshot_manager_handle = tokio::spawn(snapshot_manager.start_loop());

@@ -160,6 +160,7 @@ dependencies = [
  "prost",
  "reqwest",
  "sdl2",
+ "secstr",
  "serde",
  "serde_json",
  "tokio",
@@ -1062,6 +1063,15 @@ dependencies = [
  "cfg-if",
  "libc",
  "version-compare",
+]
+
+[[package]]
+name = "secstr"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e04f657244f605c4cf38f6de5993e8bd050c8a303f86aeabff142d5c7c113e12"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

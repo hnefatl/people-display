@@ -5,6 +5,7 @@ use crate::photo_manager;
 use lib::clock_pb;
 use lib::clock_pb::clock_service_server::{ClockService, ClockServiceServer};
 use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
+use lib::password::CheckPassword;
 
 use log;
 
@@ -72,15 +73,20 @@ pub struct ClockServer {
 }
 impl ClockServer {
     pub fn make_server(
+        password: secstr::SecStr,
         homeassistant_connection_config: config::HomeAssistantConfig,
         person_ids: Vec<homeassistant::PersonId>,
         photo_manager: photo_manager::PhotoManager,
-    ) -> ClockServiceServer<ClockServer> {
-        ClockServiceServer::new(ClockServer {
+    ) -> tonic::service::interceptor::InterceptedService<
+        ClockServiceServer<ClockServer>,
+        CheckPassword,
+    > {
+        let server = ClockServer {
             homeassistant_connection_config,
             person_ids,
             photo_manager,
-        })
+        };
+        ClockServiceServer::with_interceptor(server, CheckPassword::new(password))
     }
 }
 

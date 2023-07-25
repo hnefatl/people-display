@@ -1,3 +1,4 @@
+use secstr::SecStr;
 use std::str::FromStr;
 
 pub trait ConfigParamFromEnv {
@@ -32,6 +33,11 @@ where
 {
     fn parse(val: &str) -> Result<Vec<T>, String> {
         val.split(',').map(ConfigParamFromEnv::parse).collect()
+    }
+}
+impl ConfigParamFromEnv for SecStr {
+    fn parse(val: &str) -> Result<SecStr, String> {
+        Ok(SecStr::from(val))
     }
 }
 

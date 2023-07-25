@@ -4,6 +4,8 @@ use std::time::Duration;
 use lib::clock_pb;
 use lib::clock_pb::clock_service_client::ClockServiceClient;
 use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
+use lib::password::AddPassword;
+use secstr::SecStr;
 
 pub struct Snapshot {
     pub people: Vec<clock_pb::Person>,
@@ -25,17 +27,20 @@ pub type EndpointSnapshots = Vec<Snapshot>;
 
 pub struct SnapshotManager {
     snapshot_interval: Duration,
+    password: SecStr,
     endpoint_uris: Vec<tonic::transport::Uri>,
     tx: mpsc::Sender<EndpointSnapshots>,
 }
 impl SnapshotManager {
     pub async fn initialise(
         snapshot_interval: Duration,
+        password: SecStr,
         endpoint_uris: &Vec<tonic::transport::Uri>,
     ) -> (Self, mpsc::Receiver<EndpointSnapshots>) {
         let (tx, rx) = mpsc::channel();
         let snapshot_manager = SnapshotManager {
             snapshot_interval,
+            password,
             endpoint_uris: endpoint_uris.clone(),
             tx,
         };
@@ -58,10 +63,16 @@ impl SnapshotManager {
         let mut snapshots = vec![];
         for endpoint in &self.endpoint_uris {
             log::info!("Connecting to {}", endpoint);
-            let mut client = ClockServiceClient::connect(endpoint.clone())
+            let channel = tonic::transport::Channel::builder(endpoint.clone())
+                .connect()
                 .await
                 .map_err(|e| format!("Failed to connect: {e}"))?;
+            let mut client = ClockServiceClient::with_interceptor(
+                channel,
+                AddPassword::new(self.password.clone()),
+            );
             log::info!("Connected");
+
             let rpc = client
                 .get_people_locations(GetPeopleLocationsRequest {})
                 .await

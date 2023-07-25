@@ -25,6 +25,7 @@ async fn main() -> ! {
     log::info!("Starting server on {addr}");
     loop {
         let clock_service = clock_service::ClockServer::make_server(
+            config.password.clone(),
             config.homeassistant.clone(),
             config.person_entity_ids.clone(),
             photo_manager::PhotoManager::new(config.photo_directory.clone()),
