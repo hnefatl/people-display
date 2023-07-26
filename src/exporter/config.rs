@@ -16,7 +16,7 @@ pub struct Config {
 #[derive(Debug, Clone)]
 pub struct HomeAssistantConfig {
     pub endpoint: String,
-    pub access_token: String,
+    pub access_token: secstr::SecStr,
 }
 
 pub fn get_config_from_environment_variables() -> Result<Config, String> {

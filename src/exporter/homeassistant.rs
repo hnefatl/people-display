@@ -12,6 +12,7 @@ pub enum Error {
     UrlParseError(String),
     InvalidResponseBody(reqwest::Error),
     JsonDecodeError(reqwest::Url, serde_json::Error, String),
+    InvalidAccessToken(std::str::Utf8Error),
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -25,6 +26,7 @@ impl std::fmt::Display for Error {
             Error::JsonDecodeError(url, e, body) => f.write_fmt(format_args!(
                 "JSON decode error from '{url}': {e}.\n\nFull text: {body}"
             )),
+            Error::InvalidAccessToken(e) => f.write_fmt(format_args!("Invalid access token: {e}")),
         }
     }
 }
@@ -34,8 +36,8 @@ pub struct Client {
     server_endpoint: reqwest::Url,
 }
 impl Client {
-    pub fn new(access_token: &str, endpoint: &str) -> Result<Self, Error> {
-        let headers = Client::make_headers(access_token).map_err(Error::InvalidHeaderValue)?;
+    pub fn new(access_token: &secstr::SecStr, endpoint: &str) -> Result<Self, Error> {
+        let headers = Client::make_headers(access_token)?;
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .timeout(std::time::Duration::from_secs(10))
@@ -48,15 +50,21 @@ impl Client {
         })
     }
 
-    fn make_headers(
-        access_token: &str,
-    ) -> Result<reqwest::header::HeaderMap, reqwest::header::InvalidHeaderValue> {
-        let mut auth_header: reqwest::header::HeaderValue =
-            format!("Bearer {access_token}").parse()?;
+    fn make_headers(access_token: &secstr::SecStr) -> Result<reqwest::header::HeaderMap, Error> {
+        let access_token_str =
+            std::str::from_utf8(access_token.unsecure()).map_err(Error::InvalidAccessToken)?;
+        let mut auth_header: reqwest::header::HeaderValue = format!("Bearer {access_token_str}")
+            .parse()
+            .map_err(Error::InvalidHeaderValue)?;
         auth_header.set_sensitive(true);
 
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(reqwest::header::CONTENT_TYPE, "application/json".parse()?);
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            "application/json"
+                .parse()
+                .map_err(Error::InvalidHeaderValue)?,
+        );
         headers.insert(reqwest::header::AUTHORIZATION, auth_header);
         Ok(headers)
     }
