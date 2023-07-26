@@ -4,7 +4,7 @@
   - [x] Multiple display tiles
   - [x] Encryption/authentication from display->exporter.
     - [ ] Support for a password per exporter instance (display must take multiple passwords).
-  - [ ] Secrets via environment variable file, rather than plaintext.
+  - [x] Secrets via environment variable file, rather than plaintext.
   - [ ] Privacy toggle
   - [ ] Privacy zones (exclude subzones of a larger zone)
   - [ ] Documentation
