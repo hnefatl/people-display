@@ -1,7 +1,7 @@
 use secstr::SecStr;
 
-use crate::homeassistant;
-use lib::env_params::get_env_variable;
+use crate::{homeassistant, homeassistant_types};
+use lib::env_params::{get_env_variable, get_optional_env_variable};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -11,6 +11,7 @@ pub struct Config {
     pub password: SecStr,
     pub homeassistant: HomeAssistantConfig,
     pub person_entity_ids: Vec<homeassistant::PersonId>,
+    pub privacy_switch_entity_id: Option<homeassistant_types::InputBooleanId>,
     pub photo_directory: std::path::PathBuf,
 }
 #[derive(Debug, Clone)]
@@ -28,6 +29,7 @@ pub fn get_config_from_environment_variables() -> Result<Config, String> {
             access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN")?,
         },
         person_entity_ids: get_env_variable("PERSON_ENTITY_IDS")?,
+        privacy_switch_entity_id: get_optional_env_variable("PRIVACY_SWITCH")?,
         photo_directory: get_env_variable("PHOTO_DIRECTORY")?,
     })
 }

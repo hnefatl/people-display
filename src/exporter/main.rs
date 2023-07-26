@@ -29,6 +29,7 @@ async fn main() -> ! {
             config.password.clone(),
             config.homeassistant.clone(),
             config.person_entity_ids.clone(),
+            &config.privacy_switch_entity_id,
             photo_manager::PhotoManager::new(config.photo_directory.clone()),
         );
         let server = tonic::transport::Server::builder().add_service(clock_service);

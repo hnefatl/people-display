@@ -40,6 +40,7 @@ impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityId<P> {
 
 pub type PersonId = EntityId<"person.">;
 pub type ZoneId = EntityId<"zone.">;
+pub type InputBooleanId = EntityId<"input_boolean.">;
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(untagged)]
@@ -52,6 +53,11 @@ pub enum AttributeValue {
     MapValue(AttributeMap),
 }
 pub type AttributeMap = std::collections::HashMap<String, AttributeValue>;
+
+/// Generic "thing that can have state fetched" trait, for tying together entity types and their IDs.
+pub trait Entity: for<'a> serde::Deserialize<'a> {
+    type Id: std::string::ToString;
+}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct Person {
@@ -71,6 +77,9 @@ impl Person {
         }
     }
 }
+impl Entity for Person {
+    type Id = PersonId;
+}
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct Zone {
     #[serde(rename = "entity_id")]
@@ -79,13 +88,23 @@ pub struct Zone {
     #[serde(default)]
     pub attributes: AttributeMap,
 }
-/// Generic "thing that can have state fetched" trait, for tying together entity types and their IDs.
-pub trait Entity: for<'a> serde::Deserialize<'a> {
-    type Id: std::string::ToString;
-}
-impl Entity for Person {
-    type Id = PersonId;
-}
 impl Entity for Zone {
     type Id = ZoneId;
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct InputBoolean {
+    #[serde(rename = "state")]
+    _state: String,
+}
+impl From<InputBoolean> for bool {
+    fn from(value: InputBoolean) -> Self {
+        // I think this could also be "Unavailable" if the server is starting up.
+        // Rather than e.g. implement TryFrom and handle that case, just fail-closed
+        // by treating anything other than specifically "off" as "privacy enabled".
+        value._state != "off"
+    }
+}
+impl Entity for InputBoolean {
+    type Id = InputBooleanId;
 }

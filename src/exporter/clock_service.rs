@@ -9,7 +9,7 @@ use lib::password::CheckPassword;
 
 use log;
 
-fn get_photo<const P: homeassistant::PrefixType>(
+fn get_entity_photo<const P: homeassistant::PrefixType>(
     entity_id: &homeassistant::EntityId<P>,
     photo_manager: &photo_manager::PhotoManager,
 ) -> Option<Vec<u8>> {
@@ -24,51 +24,10 @@ fn get_photo<const P: homeassistant::PrefixType>(
     }
 }
 
-async fn get_photo_fallback_to_homeassistant(
-    person: &homeassistant::Person,
-    photo_manager: &photo_manager::PhotoManager,
-    client: &homeassistant::Client,
-) -> Result<Option<Vec<u8>>, homeassistant::Error> {
-    match get_photo(&person.id, photo_manager) {
-        Some(photo) => Ok(Some(photo)),
-        None => {
-            log::info!(
-                "No photo file for '{}', trying to fetch from HA",
-                &person.id
-            );
-            let photo = client.get_photo(person).await?;
-            if photo.is_none() {
-                log::info!("No photo for {} available from HA", &person.id);
-            }
-            Ok(photo)
-        }
-    }
-}
-
-fn zone_to_proto(
-    zone: homeassistant::Zone,
-    photo_manager: &photo_manager::PhotoManager,
-) -> clock_pb::Zone {
-    clock_pb::Zone {
-        photo_data: get_photo(&zone.id, photo_manager),
-        id: zone.id.to_string(),
-    }
-}
-async fn person_to_proto(
-    person: homeassistant::Person,
-    photo_manager: &photo_manager::PhotoManager,
-    client: &homeassistant::Client,
-) -> Result<clock_pb::Person, homeassistant::Error> {
-    Ok(clock_pb::Person {
-        photo_data: get_photo_fallback_to_homeassistant(&person, photo_manager, client).await?,
-        id: person.id.to_string(),
-        zone_id: person.zone_id.to_string(),
-    })
-}
-
 pub struct ClockServer {
     homeassistant_connection_config: config::HomeAssistantConfig,
     person_ids: Vec<homeassistant::PersonId>,
+    privacy_switch_entity_id: Option<homeassistant::InputBooleanId>,
     photo_manager: photo_manager::PhotoManager,
 }
 impl ClockServer {
@@ -76,6 +35,7 @@ impl ClockServer {
         password: secstr::SecStr,
         homeassistant_connection_config: config::HomeAssistantConfig,
         person_ids: Vec<homeassistant::PersonId>,
+        privacy_switch_entity_id: &Option<homeassistant::InputBooleanId>,
         photo_manager: photo_manager::PhotoManager,
     ) -> tonic::service::interceptor::InterceptedService<
         ClockServiceServer<ClockServer>,
@@ -84,9 +44,70 @@ impl ClockServer {
         let server = ClockServer {
             homeassistant_connection_config,
             person_ids,
+            privacy_switch_entity_id: privacy_switch_entity_id.clone(),
             photo_manager,
         };
         ClockServiceServer::with_interceptor(server, CheckPassword::new(password))
+    }
+
+    async fn snapshot_to_response(
+        &self,
+        client: &homeassistant::Client,
+        snapshot: homeassistant::Snapshot,
+    ) -> GetPeopleLocationsResponse {
+        let mut people = vec![];
+        for person in snapshot.people {
+            let photo_data: Option<Vec<u8>>;
+            if let Some(pd) = get_entity_photo(&person.id, &self.photo_manager) {
+                photo_data = Some(pd);
+            } else {
+                log::info!(
+                    "No photo file for '{}', trying to fetch from HA",
+                    &person.id
+                );
+                match client.get_photo(&person).await {
+                    Ok(pd) => photo_data = pd,
+                    Err(e) => {
+                        log::error!("Failed to get photo for {}: {}", &person.id, e);
+                        photo_data = None;
+                    }
+                }
+            }
+
+            people.push(clock_pb::Person {
+                photo_data,
+                id: person.id.to_string(),
+                zone_id: person.zone_id.to_string(),
+            })
+        }
+
+        let privacy_enabled: bool;
+        if let Some(id) = &self.privacy_switch_entity_id {
+            match client.get_entity::<homeassistant::InputBoolean>(&id).await {
+                Ok(privacy_input_boolean) => privacy_enabled = privacy_input_boolean.into(),
+                Err(e) => {
+                    log::warn!(
+                        "Unable to fetch {} from HA, assuming privacy is enabled: {e}",
+                        &id
+                    );
+                    privacy_enabled = true;
+                }
+            }
+        } else {
+            privacy_enabled = false
+        }
+
+        let mut zones = vec![];
+        if !privacy_enabled {
+            for zone_id in snapshot.zones.keys() {
+                zones.push(clock_pb::Zone {
+                    photo_data: get_entity_photo(zone_id, &self.photo_manager),
+                    id: zone_id.to_string(),
+                })
+            }
+        }
+
+        GetPeopleLocationsResponse { people, zones }
     }
 }
 
@@ -105,22 +126,7 @@ impl ClockService for ClockServer {
             Ok(client) => {
                 let snapshot = homeassistant::get_snapshot(&client, &self.person_ids).await;
 
-                let mut people = vec![];
-                for person in snapshot.people {
-                    match person_to_proto(person.clone(), &self.photo_manager, &client).await {
-                        Ok(person_proto) => {
-                            people.push(person_proto);
-                        }
-                        Err(e) => log::error!("Failed to get photo for {}: {}", &person.id, e),
-                    }
-                }
-                let zones = snapshot
-                    .zones
-                    .into_values()
-                    .map(|z| zone_to_proto(z, &self.photo_manager))
-                    .collect();
-
-                let response = GetPeopleLocationsResponse { people, zones };
+                let response = self.snapshot_to_response(&client, snapshot).await;
                 log::trace!("Responding with: {response:?}");
                 Ok(tonic::Response::new(response))
             }

@@ -5,7 +5,8 @@
   - [x] Encryption/authentication from display->exporter.
     - [ ] Support for a password per exporter instance (display must take multiple passwords).
   - [x] Secrets via environment variable file, rather than plaintext.
-  - [ ] Privacy toggle
+  - [x] Privacy toggle
+    - [ ] Per-person privacy toggles
   - [ ] Privacy zones (exclude subzones of a larger zone)
   - [ ] Documentation
 - Deployment:
