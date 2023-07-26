@@ -41,39 +41,30 @@ impl ConfigParamFromEnv for SecStr {
     }
 }
 
-pub fn get_env_variable<T>(key: &str) -> Result<T, String>
-where
-    T: ConfigParamFromEnv,
-{
-    get_optional_env_variable(key)?.ok_or(format!("Environment variable '{key}' not set."))
-}
-
-pub fn get_optional_env_variable<T>(key: &str) -> Result<Option<T>, String>
-where
-    T: ConfigParamFromEnv,
-{
+fn _get_env_variable<T: ConfigParamFromEnv>(key: &str) -> Result<Option<T>, String> {
     match std::env::var(key) {
-        Ok(v) => ConfigParamFromEnv::parse(&*v).map(Some),
-        Err(_) => Ok(None),
+        Ok(v) => Ok(Some(ConfigParamFromEnv::parse(&v)?)),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(e) => Err(e.to_string()),
     }
 }
-
-pub fn get_env_variable_with_default<T>(key: &str, default: T) -> Result<T, String>
-where
-    T: ConfigParamFromEnv,
-{
-    get_optional_env_variable(key).map(|v| v.unwrap_or(default))
+pub fn get_optional_env_variable<T: ConfigParamFromEnv>(key: &str) -> Result<Option<T>, String> {
+    if let Some(v) = _get_env_variable(key)? {
+        return Ok(Some(v));
+    } else if let Some(path) = _get_env_variable::<String>(&format!("{key}_FILE"))? {
+        let contents =
+            std::fs::read_to_string(&path).map_err(|e| format!("When opening {path}: {e}"))?;
+        return Ok(Some(ConfigParamFromEnv::parse(contents.trim())?));
+    }
+    return Ok(None);
 }
-pub fn get_env_variable_from_file<T>(key: &str) -> Result<T, String>
-where
-    T: ConfigParamFromEnv,
-{
-    assert!(key.ends_with("_FILE"));
-    let key_without_file = key.trim_end_matches("_FILE");
-    let key = format!("{key_without_file}_FILE");
 
-    let path: String = get_env_variable(&key)?;
-    let contents =
-        std::fs::read_to_string(&path).map_err(|e| format!("When opening {path}: {e}"))?;
-    ConfigParamFromEnv::parse(&contents.trim())
+pub fn get_env_variable<T: ConfigParamFromEnv>(key: &str) -> Result<T, String> {
+    get_optional_env_variable(key)?.ok_or(format!("Environment variable '{key}' not set."))
+}
+pub fn get_env_variable_with_default<T: ConfigParamFromEnv>(
+    key: &str,
+    default: T,
+) -> Result<T, String> {
+    get_optional_env_variable(key).map(|v| v.unwrap_or(default))
 }

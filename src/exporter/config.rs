@@ -1,7 +1,7 @@
 use secstr::SecStr;
 
-use lib::env_params::{get_env_variable, get_env_variable_from_file};
 use crate::homeassistant;
+use lib::env_params::get_env_variable;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -22,10 +22,10 @@ pub struct HomeAssistantConfig {
 pub fn get_config_from_environment_variables() -> Result<Config, String> {
     Ok(Config {
         port: get_env_variable("PORT")?,
-        password: get_env_variable_from_file("PASSWORD_FILE")?,
+        password: get_env_variable("PASSWORD")?,
         homeassistant: HomeAssistantConfig {
             endpoint: get_env_variable("HOME_ASSISTANT_ENDPOINT")?,
-            access_token: get_env_variable_from_file("HOME_ASSISTANT_ACCESS_TOKEN_FILE")?,
+            access_token: get_env_variable("HOME_ASSISTANT_ACCESS_TOKEN")?,
         },
         person_entity_ids: get_env_variable("PERSON_ENTITY_IDS")?,
         photo_directory: get_env_variable("PHOTO_DIRECTORY")?,
