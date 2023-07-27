@@ -11,7 +11,7 @@
   - [ ] Documentation
 - Deployment:
   - [x] Docker container for exporter
-  - [ ] Docker build deployment pipeline
+  - [x] Docker build deployment pipeline
   - [ ] Raspberry-pi-compatible linux image for display
   - [ ] Wireguard configured, wifi networks pre-seeded
   - [ ] Automatic(?) display update procedures
