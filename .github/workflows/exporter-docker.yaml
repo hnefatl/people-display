@@ -1,4 +1,4 @@
-name: Build and publish Exporter
+name: "Docker Image: Exporter"
 
 on:
   push:
