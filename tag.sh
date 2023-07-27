@@ -6,4 +6,4 @@ if [[ $# -ne 2 ]] ; then
 fi
 
 git tag -a "$1" -m "$2"
-git push "$1"
+git push origin "$1"
