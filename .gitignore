@@ -6,3 +6,6 @@ photos/
 secrets/
 # Contains API secret, shouldn't be committed.
 run_*.sh
+
+# Default path for secrets used in preseed.sh
+display-deploy/preseed-variables.sh
