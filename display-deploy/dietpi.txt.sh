@@ -36,11 +36,6 @@ AUTO_SETUP_HEADLESS=0
 # Unmask (enable) systemd-logind service (including dbus), which is masked by default on DietPi
 AUTO_UNMASK_LOGIND=0
 
-# Custom Script (pre-networking and pre-DietPi install)
-# - Allows you to automatically execute a custom script before network is up on first boot.
-# - Copy your script to /boot/Automation_Custom_PreScript.sh and it will be executed automatically.
-# - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_prescript.log
-
 # Custom Script (post-networking and post-DietPi install)
 # - Allows you to automatically execute a custom script at the end of DietPi install.
 # - Option 0 = Copy your script to /boot/Automation_Custom_Script.sh and it will be executed automatically.
@@ -110,6 +105,8 @@ AUTO_SETUP_GLOBAL_PASSWORD=${PASSWORD}
 AUTO_SETUP_INSTALL_SOFTWARE_ID=23
 # Git
 AUTO_SETUP_INSTALL_SOFTWARE_ID=17
+# Dropbear
+AUTO_SETUP_INSTALL_SOFTWARE_ID=104
 # Neovim
 AUTO_SETUP_INSTALL_SOFTWARE_ID=127
 # Docker-compose
@@ -225,78 +222,9 @@ CONFIG_NTP_MIRROR=debian.pool.ntp.org
 #	1=Disable password logins for all users, assure that you have a valid SSH key applied!
 SOFTWARE_DISABLE_SSH_PASSWORD_LOGINS=1
 
-# VNC Server
-SOFTWARE_VNCSERVER_WIDTH=1280
-SOFTWARE_VNCSERVER_HEIGHT=720
-SOFTWARE_VNCSERVER_DEPTH=16
-SOFTWARE_VNCSERVER_DISPLAY_INDEX=1
-SOFTWARE_VNCSERVER_SHARE_DESKTOP=0
-
-# ownCloud/Nextcloud
-# - Optional username for admin account, the default is 'admin', applied during install
-SOFTWARE_OWNCLOUD_NEXTCLOUD_USERNAME=admin
-# - Optional data directory, default is "/mnt/dietpi_userdata/owncloud_data" respectively "/mnt/dietpi_userdata/nextcloud_data", applied during install
-SOFTWARE_OWNCLOUD_DATADIR=/mnt/dietpi_userdata/owncloud_data
-SOFTWARE_NEXTCLOUD_DATADIR=/mnt/dietpi_userdata/nextcloud_data
-
-# WiFi Hotspot
-SOFTWARE_WIFI_HOTSPOT_SSID=DietPi-HotSpot
-# - Key requires a minimum of 8 characters
-SOFTWARE_WIFI_HOTSPOT_KEY=dietpihotspot
-SOFTWARE_WIFI_HOTSPOT_CHANNEL=3
-
 # X.org
 # - DPI 96(default) 120(+25%) 144(+50%) 168(+75%) 192(+100%)
 SOFTWARE_XORG_DPI=96
-
-# Chromium
-SOFTWARE_CHROMIUM_RES_X=1280
-SOFTWARE_CHROMIUM_RES_Y=720
-SOFTWARE_CHROMIUM_AUTOSTART_URL=https://dietpi.com/
-
-# Home Assistant
-# - Optional Python build dependencies and modules, possibly required for certain HA components
-#	Space separated list (no quotation!), will be installed together with Home Assistant automatically, if present
-SOFTWARE_HOMEASSISTANT_APT_DEPS=
-#	Add Python modules with version string at best, e.g.: firstModule==1.2.3 secondModule==4.5.6
-SOFTWARE_HOMEASSISTANT_PIP_DEPS=
-
-# K3s
-# Command with flags to use for launching K3s in the service
-# The value of this variable is copied directly into the INSTALL_K3S_EXEC environment variable before
-# running the K3s installer.
-# https://rancher.com/docs/k3s/latest/en/installation/install-options/#options-for-installation-with-script
-#
-# Optionally, you can add a configuration file named /boot/dietpi-k3s.yaml,
-# which will be copied into place during installation.
-# https://rancher.com/docs/k3s/latest/en/installation/install-options/#configuration-file
-SOFTWARE_K3S_EXEC=
-
-# DietPi-Dashboard
-# Version to use
-# - Stable = Use release version of DietPi-Dashboard.
-# - Nightly = Use unstable version DietPi-Dashboard. Might have bugs, but will probably have more features.
-SOFTWARE_DIETPI_DASHBOARD_VERSION=Stable
-# Whether to only install backend or not
-SOFTWARE_DIETPI_DASHBOARD_BACKEND=0
-
-# PiVPN
-# - For an unattended install, place a config file named "unattended_pivpn.conf" into the boot partition/directory.
-# - For example configs, have a look at: https://github.com/pivpn/pivpn/tree/master/examples
-
-# Shairport Sync
-# - Uncomment and set to "2" to install experimental AirPlay 2 build: https://github.com/mikebrady/shairport-sync/blob/master/AIRPLAY2.md
-#SOFTWARE_SHAIRPORT_SYNC_AIRPLAY=2
-
-# UrBackup Server
-# - Backup path, optional, defaults to "/mnt/dietpi_userdata/urbackup", effective on fresh UrBackup Server installs only
-SOFTWARE_URBACKUP_BACKUPPATH=/mnt/dietpi_userdata/urbackup
-
-#------------------------------------------------------------------------------------------------------
-##### Dev settings #####
-#------------------------------------------------------------------------------------------------------
-DEV_GITBRANCH=master
-DEV_GITOWNER=MichaIng
 
 #------------------------------------------------------------------------------------------------------
 ##### Settings, automatically added by dietpi-update #####
