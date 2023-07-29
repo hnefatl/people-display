@@ -60,7 +60,7 @@ AUTO_SETUP_SSH_SERVER_INDEX=-1
 # - Public key(s) for "root" and "dietpi" users, which will be added to ~/.ssh/authorized_keys
 # - Use the same setting multiple times for adding multiple keys.
 # - See SOFTWARE_DISABLE_SSH_PASSWORD_LOGINS below for disabling SSH password logins.
-#AUTO_SETUP_SSH_PUBKEY=ssh-ed25519 AAAAAAAA111111111111BBBBBBBBBBBB222222222222cccccccccccc333333333333 mySSHkey
+AUTO_SETUP_SSH_PUBKEY=${SSH_PUBLIC_KEY}
 
 # Logging mode choice: 0=none/custom | -1=RAMlog hourly clear | -2=RAMlog hourly save to disk + clear | -3=Rsyslog + Logrotate
 AUTO_SETUP_LOGGING_INDEX=-1
