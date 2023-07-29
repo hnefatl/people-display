@@ -20,8 +20,9 @@
     - [ ] Systemctl autostart
     - [ ] Wireguard configured
   - [ ] Automatic(?) display update procedures
-- Testing
-  - [ ] Hardware assembled
+- Hardware
+  - [ ] Assembled
+  - [ ] Power button (GPIO-triggered, script listening and running `shutdown`)
   - [ ] Own setup configured
 - Container
   - [ ] Modelled
