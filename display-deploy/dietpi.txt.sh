@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Print a preseed.cfg, using sensitive secrets imported from preeseed-variables.sh
-source preeseed-variables.sh
+source preseed-variables.sh
 
-echo <<EOF
+echo "\
 ##### Language/Regional options #####
 AUTO_SETUP_LOCALE=en_GB.UTF-8
 AUTO_SETUP_KEYBOARD_LAYOUT=gb
@@ -301,4 +301,4 @@ DEV_GITOWNER=MichaIng
 #------------------------------------------------------------------------------------------------------
 ##### Settings, automatically added by dietpi-update #####
 #------------------------------------------------------------------------------------------------------
-EOF
+"

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-source preeseed-variables.sh
+source preseed-variables.sh
 
-echo <<EOF
+echo "\
 # Entry 0
 # - WiFi SSID: required, case sensitive
 aWIFI_SSID[0]='${INIT_WIFI_SSID}'
@@ -44,4 +44,4 @@ aWIFI_PHASE1[1]=''
 aWIFI_PHASE2[1]=''
 # - Path to the certificate file, e.g.: /boot/mycert.cer
 aWIFI_CERT[1]=''
-EOF
+"
