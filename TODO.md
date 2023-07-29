@@ -13,7 +13,12 @@
   - [x] Docker container for exporter
   - [x] Docker build deployment pipeline
   - [ ] Raspberry-pi-compatible linux image for display
-  - [ ] Wireguard configured, wifi networks pre-seeded
+    - [ ] Basic autoinstall
+    - [ ] WiFi configured
+    - [ ] SSH server configured
+    - [ ] Docker configured
+    - [ ] Systemctl autostart
+    - [ ] Wireguard configured
   - [ ] Automatic(?) display update procedures
 - Testing
   - [ ] Hardware assembled

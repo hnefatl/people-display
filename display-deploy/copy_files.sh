@@ -7,11 +7,16 @@ if [[ $# -ne 1 ]] ; then
 fi
 dev="$1"
 
-if [ ! -f preseed-variables.sh ] ; then
-    echo "A file called 'preseed-variables.sh' must exist, containing bash variable definitions for seeding into these files."
-    echo "Required variables are INIT_WIFI_SSID, INIT_WIFI_PSK, DEST_WIFI_SSID, DEST_WIFI_PSK, PASSWORD"
-    exit -1
+if [[ -f preseed-variables.sh ]] ; then
+    source preseed-variables.sh
 fi
+
+[[ -z $INIT_WIFI_SSID ]] && echo "Required INIT_WIFI_SSID: SSID for WiFi network where the device is being configured." && exit -1
+[[ -z $INIT_WIFI_PSK ]] && echo "Required INIT_WIFI_PSK: PSK for WiFi network where the device is being configured." && exit -1
+[[ -z $DEST_WIFI_SSID ]] && echo "Required DEST_WIFI_SSID: SSID for WiFi network where the device will be installed." && exit -1
+[[ -z $DEST_WIFI_PSK ]] && echo "Required DEST_WIFI_PSK: PSK for WiFi network where the device will be installed." && exit -1
+[[ -z $PASSWORD ]] && echo "Required PASSWORD: User password to configure." && exit -1
+[[ -z $SSH_PUBLIC_KEY ]] && echo "Required SSH_PUBLIC_KEY: Public key to add to .authorized_keys for remote connection, in 'ssh-ed25519 abc name@foo' format." && exit -1
 
 function cleanup {
     umount "$root_dir/boot"
