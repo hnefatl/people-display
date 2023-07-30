@@ -13,9 +13,10 @@
   - [x] Docker container for exporter
   - [x] Docker build deployment pipeline
   - [ ] Raspberry-pi-compatible linux image for display
-    - [ ] Basic autoinstall
-    - [ ] WiFi configured
-    - [ ] SSH server configured
+    - [x] Basic autoinstall
+    - [x] WiFi configured
+    - [x] SSH server configured
+    - [x] Desktop configured
     - [ ] Docker configured
     - [ ] Systemctl autostart
     - [ ] Wireguard configured
