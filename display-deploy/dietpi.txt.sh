@@ -1,6 +1,6 @@
 #!/bin/bash
-
 # Print a preseed.cfg, using sensitive secrets imported from preeseed-variables.sh
+
 source preseed-variables.sh
 
 echo "\
@@ -101,6 +101,8 @@ AUTO_SETUP_GLOBAL_PASSWORD=${PASSWORD}
 # - List of available software IDs: https://github.com/MichaIng/DietPi/wiki/DietPi-Software-list
 # - Add as many entries as you wish, one each line.
 # - DietPi will automatically install all dependencies, like ALSA/X11 for desktops etc.
+# openssh-client, which contains the handy \`scp\` program (since we're using dropbear above)
+AUTO_SETUP_INSTALL_SOFTWARE_ID=23
 # LXDE Desktop
 AUTO_SETUP_INSTALL_SOFTWARE_ID=23
 # Git
