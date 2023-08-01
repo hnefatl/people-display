@@ -17,10 +17,10 @@
     - [x] WiFi configured
     - [x] SSH server configured
     - [x] Desktop configured
-    - [ ] Docker configured
+    - [x] Docker configured
     - [ ] Systemctl autostart
-    - [ ] Wireguard configured
-  - [ ] Automatic(?) display update procedures
+    - [x] Wireguard configured
+  - [x] Automatic(?) display update procedures
 - Hardware
   - [ ] Assembled
   - [ ] Power button (GPIO-triggered, script listening and running `shutdown`)
