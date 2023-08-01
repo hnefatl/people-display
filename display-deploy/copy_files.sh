@@ -43,7 +43,7 @@ mkdir -p "$root_dir/etc/wireguard" || exit 2
 cp "$WIREGUARD_CONFIG_FILE" "$root_dir/etc/wireguard/wg0.conf" || exit 2
 
 # Static files that don't need any variable expansions
-cp files "$root_dir/files" || exit 2
+cp -r files "$root_dir/files" || exit 2
 
 echo "$DISPLAY_ENDPOINTS" > "$root_files/display_endpoints"
 echo "$DISPLAY_PASSWORD" > "$root_files/display_password"
