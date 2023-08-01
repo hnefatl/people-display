@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Set display resolution for next boot.
+# Set display resolution to 800x480 for next boot. This maybe requires 2 boots to take effect, not sure?
 sed -i 's/#hdmi_group=.*/hdmi_group=2/' /boot/config.txt
 sed -i 's/#hdmi_mode=.*/hdmi_mode=87/' /boot/config.txt
 echo "hdmi_cvt=800 480 60 6 0 0 0" >> /boot/config.txt
@@ -34,6 +34,8 @@ resolvconf -u
 apt-get install wireguard-tools iptables qrencode
 
 # Enable wireguard on boot, but don't worry about starting it now - post-install means about to reboot anyway.
-systemctl enable wg-quick@wg0
+# Wireguard will fail to start with `RTNETLINK answers: File exists` if an identical subnet is already provided by
+# e.g. the current wifi network, but it'll work when rebooted on another network.
+systemctl enable /files/wireguard.service
 
 # TODO: Configure systemctl.

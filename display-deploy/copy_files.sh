@@ -42,4 +42,5 @@ cp "$WIREGUARD_CONFIG_FILE" "$root_dir/etc/wireguard/wg0.conf" || exit 2
 
 # Background image. Check post_install.sh for where this is used.
 mkdir -p "$root_dir/files" || exit 2
+cp wireguard.service "$root_dir/files/wireguard.service" || exit 2
 cp background.png "$root_dir/files/background.png" || exit 2
