@@ -4,3 +4,5 @@
 [toolchain]
 channel = "nightly-2023-07-21"
 profile = "minimal"
+# Include the raspberry pi 3 architecture.
+targets = ["arm-unknown-linux-gnueabi"]

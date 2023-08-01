@@ -19,13 +19,16 @@ path = "src/exporter/main.rs"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = {version = "0.11", features = ["json"]}
+reqwest = { version = "0.11", features = ["json"] }
 tonic = "0.9.2"
 prost = "0.11"
 log = "0.4.19"
 env_logger = "0.10.0"
-sdl2 = { version = "0.35.2", features = ["image"] }
+# bundled enables static building+linking of SDL, for cross-compilation
+sdl2 = { version = "0.35.2", features = ["image", "bundled"] }
 secstr = "0.5.1"
+# Link openssl statically into the binary, so that cross-compilation to ARM works.
+openssl = { version = "0.10.55", features = ["vendored"] }
 
 [build-dependencies]
 tonic-build = "0.9.2"
