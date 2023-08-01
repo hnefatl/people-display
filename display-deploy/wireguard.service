@@ -1,0 +1,15 @@
+[Unit]
+Description=WireGuard
+After=network-online.target nss-lookup.target
+Wants=network-online.target nss-lookup.target
+
+[Service]
+ExecStart=/usr/bin/wg-quick up wg0
+ExecStop=/usr/bin/wg-quick down wg0
+ExecReload=/bin/bash -c 'exec /usr/bin/wg syncconf wg0 <(exec /usr/bin/wg-quick strip wg0)'
+Environment=WG_ENDPOINT_RESOLUTION_RETRIES=infinity
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
