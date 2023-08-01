@@ -11,6 +11,8 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef as builder
 # Cache apt packages: https://docs.docker.com/engine/reference/builder/#run---mounttypecache
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+# Install the ARM cross-compiler for later.
+# TODO: can maybe remove libssl-dev here and below, now that we're statically linking?
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt update && apt-get --no-install-recommends install -y \
@@ -18,12 +20,16 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libssl-dev \
     protobuf-compiler \
     libsdl2-dev \
-    libsdl2-image-dev
+    libsdl2-image-dev \
+    cmake \
+    gcc-arm-linux-gnueabi \
+    g++-arm-linux-gnueabi
 
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --bin display --recipe-path recipe.json
+RUN cargo chef cook --target=arm-unknown-linux-gnueabi --release --bin display --recipe-path recipe.json
 COPY . .
-RUN cargo build --locked --release --bin display
+# Build for raspberry pi 3's architecture.
+RUN cargo build --locked --target=arm-unknown-linux-gnueabi --release --bin display
 
 FROM rust:1-slim-bookworm as runtime
 WORKDIR /app
