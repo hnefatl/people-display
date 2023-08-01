@@ -1,9 +1,9 @@
-name: "Docker Image: Exporter"
+name: "Docker Image: Display"
 
 on:
   push:
     tags:
-      - 'exporter*'
+      - 'display*'
 
 jobs:
   build:
@@ -26,12 +26,12 @@ jobs:
       id: metadata
       uses: docker/metadata-action@v4
       with:
-        images: hnefatl/people-display-exporter
+        images: hnefatl/people-display
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
-        file: exporter.Dockerfile
+        file: display.Dockerfile
         context: .
         push: true
         tags: ${{ steps.metadata.outputs.tags }}

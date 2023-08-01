@@ -1,6 +1,7 @@
 # people-display
 
 [![Exporter docker image build status](https://github.com/hnefatl/people-display/actions/workflows/exporter-docker.yaml/badge.svg)](https://github.com/hnefatl/people-display/actions/workflows/exporter-docker.yaml)
+[![Display docker image build status](https://github.com/hnefatl/people-display/actions/workflows/display-docker.yaml/badge.svg)](https://github.com/hnefatl/people-display/actions/workflows/display-docker.yaml)
 
 A display screen pulling people and zone information from a Home Assistant instance, and rendering them with photos.
 
