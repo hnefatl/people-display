@@ -36,6 +36,4 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libsdl2-image-2.0-0
 
 COPY --from=builder /app/target/release/display /app/display
-# Make world-executable, not just u/g. Weird docker thing?
-RUN chmod +x /app/display
 ENTRYPOINT ["/app/display"]
