@@ -6,8 +6,8 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/bash -c "docker-compose -f /files/docker-compose.yaml up --detach"
-ExecStop=/bin/bash -c "docker-compose -f /files/docker-compose.yaml stop"
+ExecStart=/bin/bash -c "docker compose -f /files/docker-compose.yaml up --detach"
+ExecStop=/bin/bash -c "docker compose -f /files/docker-compose.yaml stop"
 Environment="DISPLAY=:0"
 
 [Install]
