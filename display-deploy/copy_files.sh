@@ -18,6 +18,8 @@ fi
 [[ -z $PASSWORD ]] && echo "Required PASSWORD: User password to configure." && exit -1
 [[ -z $SSH_PUBLIC_KEY ]] && echo "Required SSH_PUBLIC_KEY: Public key to add to .authorized_keys for remote connection, in 'ssh-ed25519 abc name@foo' format." && exit -1
 [[ -z $WIREGUARD_CONFIG_FILE ]] && echo "Required WIREGUARD_CONFIG_FILE: Path to wireguard client configuration file to copy." && exit -1
+[[ -z $DISPLAY_ENDPOINTS ]] && echo "Required DISPLAY_ENDPOINTS: List of endpoints for the display to pull data from." && exit -1
+[[ -z $DISPLAY_PASSWORD ]] && echo "Required DISPLAY_PASSWORD: Password for authorizing to endpoints." && exit -1
 
 function cleanup {
     umount "$root_dir/boot"
@@ -40,7 +42,8 @@ cp post_install.sh "$root_dir/boot/Automation_Custom_Script.sh" || exit 2
 mkdir -p "$root_dir/etc/wireguard" || exit 2
 cp "$WIREGUARD_CONFIG_FILE" "$root_dir/etc/wireguard/wg0.conf" || exit 2
 
-# Background image. Check post_install.sh for where this is used.
-mkdir -p "$root_dir/files" || exit 2
-cp wireguard.service "$root_dir/files/wireguard.service" || exit 2
-cp background.png "$root_dir/files/background.png" || exit 2
+# Static files that don't need any variable expansions
+cp files "$root_dir/files" || exit 2
+
+echo "$DISPLAY_ENDPOINTS" > "$root_files/display_endpoints"
+echo "$DISPLAY_PASSWORD" > "$root_files/display_password"

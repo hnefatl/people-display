@@ -1,0 +1,14 @@
+[Unit]
+Description=Docker compose setup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c "docker-compose -f /files/docker-compose.yaml up --detach"
+ExecStop=/bin/bash -c "docker-compose -f /files/docker-compose.yaml stop"
+Environment="DISPLAY=:0"
+
+[Install]
+WantedBy=graphical.target

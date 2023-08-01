@@ -1,0 +1,20 @@
+services:
+  display:
+    container_name: display
+    image: hnefatl/people-display
+    restart: unless-stopped
+    environment:
+      - ENDPOINTS_FILE=/files/display_endpoints
+      - PASSWORD_FILE=/files/display_password
+
+  # Run watchtower to autoupdate containers.
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP
+      - WATCHTOWER_ROLLING_RESTART
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
