@@ -12,6 +12,7 @@ FROM chef as builder
 # Cache apt packages: https://docs.docker.com/engine/reference/builder/#run---mounttypecache
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 # Install the ARM cross-compiler for later.
+RUN rustup target add arm-unknown-linux-gnueabi
 # TODO: can maybe remove libssl-dev here and below, now that we're statically linking?
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
