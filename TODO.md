@@ -12,13 +12,13 @@
 - Deployment:
   - [x] Docker container for exporter
   - [x] Docker build deployment pipeline
-  - [ ] Raspberry-pi-compatible linux image for display
+  - [x] Raspberry-pi-compatible linux image for display
     - [x] Basic autoinstall
     - [x] WiFi configured
     - [x] SSH server configured
     - [x] Desktop configured
     - [x] Docker configured
-    - [ ] Systemctl autostart
+    - [x] Systemctl autostart
     - [x] Wireguard configured
   - [x] Automatic(?) display update procedures
 - Hardware
