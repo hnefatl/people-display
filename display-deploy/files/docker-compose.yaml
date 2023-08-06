@@ -6,6 +6,11 @@ services:
     environment:
       - ENDPOINTS_FILE=/files/display_endpoints
       - PASSWORD_FILE=/files/display_password
+      - DISPLAY=${DISPLAY}
+      - XDG_RUNTIME_DIR=/tmp
+    volumes:
+      - /files:/files
+      - /tmp/:/tmp/
 
   # Run watchtower to autoupdate containers.
   watchtower:
