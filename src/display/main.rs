@@ -99,6 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let password: secstr::SecStr = get_env_variable("PASSWORD").unwrap();
 
     let sdl_context = sdl2::init().expect("failed to init SDL");
+    sdl_context.mouse().show_cursor(false);
     let video_subsystem = sdl_context.video().expect("failed to get video context");
     let window = video_subsystem
         .window("Display", 720, 480)
