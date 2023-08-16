@@ -8,7 +8,7 @@
   - [x] Privacy toggle
     - [ ] Per-person privacy toggles
   - [ ] Privacy zones (exclude subzones of a larger zone)
-  - [ ] Documentation
+  - [x] Documentation
 - Deployment:
   - [x] Docker container for exporter
   - [x] Docker build deployment pipeline
@@ -25,7 +25,9 @@
   - [ ] Assembled
   - [ ] Power button (GPIO-triggered, script listening and running `shutdown`)
   - [ ] Own setup configured
+  - [ ] Documented
 - Container
   - [ ] Modelled
   - [ ] Printed
+  - [ ] Documented
 
