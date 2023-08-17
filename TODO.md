@@ -3,7 +3,7 @@
 - Features:
   - [x] Multiple display tiles
   - [x] Encryption/authentication from display->exporter.
-    - [ ] Support for a password per exporter instance (display must take multiple passwords).
+    - [x] Support for a password per exporter instance (display must take multiple passwords).
   - [x] Secrets via environment variable file, rather than plaintext.
   - [x] Privacy toggle
     - [ ] Per-person privacy toggles
