@@ -74,8 +74,11 @@ services:
     image: hnefatl/people-display
     restart: unless-stopped
     environment:
-      - ENDPOINTS_FILE=/files/display_endpoints
-      - PASSWORD_FILE=/files/display_password
+      - CONFIG_FILE=/files/config
+      # Alternatively specify a config inline on the command line like:
+      #- CONFIG: {"endpoints": [{"uri": "http://192.168.11:12345", "password": "foobar"}]}
+
+      # Potentially required for docker to interact with the host display server on your system.
       - DISPLAY=:0
       - XDG_RUNTIME_DIR=/tmp
     volumes:
@@ -83,10 +86,7 @@ services:
       - /tmp:/tmp
 ```
 
-Configuration variable | Usage
---- | ---
-`ENDPOINTS` | A comma-separated list of URLs indicating the exporters to pull data from. These can be `http` or `https` URLs, although `https` is strongly recommended since the `PASSWORD` is passed plaintext in the gRPC request headers.
-`PASSWORD` | The password used to authenticate to exporter instances.
+The display only takes one configuration parameter `CONFIG` (or `CONFIG_FILE` to pass a file path containing the config), which must be a JSON-format representation of the [`Config` struct](src/display/config.rs). This is necessary versus just taking separate config parameters as environment variables due to the more complex nesting structure of the display config.
 
 ### Running the display on a Raspberry Pi 3
 

@@ -1,11 +1,11 @@
 use std::sync::mpsc;
-use std::time::Duration;
 
 use lib::clock_pb;
 use lib::clock_pb::clock_service_client::ClockServiceClient;
 use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 use lib::password::AddPassword;
-use secstr::SecStr;
+
+use crate::config::Config;
 
 pub struct Snapshot {
     pub people: Vec<clock_pb::Person>,
@@ -26,24 +26,13 @@ impl From<GetPeopleLocationsResponse> for Snapshot {
 pub type EndpointSnapshots = Vec<Snapshot>;
 
 pub struct SnapshotManager {
-    snapshot_interval: Duration,
-    password: SecStr,
-    endpoint_uris: Vec<tonic::transport::Uri>,
+    config: Config,
     tx: mpsc::Sender<EndpointSnapshots>,
 }
 impl SnapshotManager {
-    pub async fn initialise(
-        snapshot_interval: Duration,
-        password: SecStr,
-        endpoint_uris: &Vec<tonic::transport::Uri>,
-    ) -> (Self, mpsc::Receiver<EndpointSnapshots>) {
+    pub async fn initialise(config: Config) -> (Self, mpsc::Receiver<EndpointSnapshots>) {
         let (tx, rx) = mpsc::channel();
-        let snapshot_manager = SnapshotManager {
-            snapshot_interval,
-            password,
-            endpoint_uris: endpoint_uris.clone(),
-            tx,
-        };
+        let snapshot_manager = SnapshotManager { config, tx };
         return (snapshot_manager, rx);
     }
 
@@ -55,21 +44,21 @@ impl SnapshotManager {
                 Err(e) => log::error!("{}", e),
                 _ => (),
             }
-            tokio::time::sleep(self.snapshot_interval).await;
+            tokio::time::sleep(self.config.poll_interval).await;
         }
     }
 
     async fn update_snapshots(&mut self) -> Result<bool, String> {
         let mut snapshots = vec![];
-        for endpoint in &self.endpoint_uris {
-            log::info!("Connecting to {}", endpoint);
-            let channel = tonic::transport::Channel::builder(endpoint.clone())
+        for endpoint in &self.config.endpoints {
+            log::info!("Connecting to {}", endpoint.uri);
+            let channel = tonic::transport::Channel::builder(endpoint.uri.clone())
                 .connect()
                 .await
                 .map_err(|e| format!("Failed to connect: {e}"))?;
             let mut client = ClockServiceClient::with_interceptor(
                 channel,
-                AddPassword::new(self.password.clone()),
+                AddPassword::new(endpoint.password.clone()),
             );
             log::info!("Connected");
 

@@ -1,3 +1,6 @@
+#![feature(never_type)]
+#![feature(exhaustive_patterns)]
+
 use env_logger;
 use log;
 use sdl2::event::Event;
@@ -10,8 +13,9 @@ use tokio;
 
 use sdl2::render::Canvas;
 
-use lib::env_params::{get_env_variable, get_env_variable_with_default};
+use lib::env_params::get_env_variable;
 
+mod config;
 mod snapshot_manager;
 mod tile;
 use tile::{snapshots_to_tiles, Tile};
@@ -94,9 +98,7 @@ fn main_loop(
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
-    let endpoint_uris: Vec<tonic::transport::Uri> = get_env_variable("ENDPOINTS").unwrap();
-    let poll_interval: u16 = get_env_variable_with_default("POLL_INTERVAL", 60).unwrap();
-    let password: secstr::SecStr = get_env_variable("PASSWORD").unwrap();
+    let config: config::Config = get_env_variable("CONFIG").unwrap();
 
     let sdl_context = sdl2::init().expect("failed to init SDL");
     sdl_context.mouse().show_cursor(false);
@@ -113,12 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .expect("failed to build window's canvas");
 
-    let (snapshot_manager, snapshot_receiver) = SnapshotManager::initialise(
-        Duration::from_secs(poll_interval as u64),
-        password,
-        &endpoint_uris,
-    )
-    .await;
+    let (snapshot_manager, snapshot_receiver) = SnapshotManager::initialise(config).await;
 
     // Start periodically fetching locations in the background.
     let snapshot_manager_handle = tokio::spawn(snapshot_manager.start_loop());
