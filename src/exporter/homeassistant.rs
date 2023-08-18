@@ -129,6 +129,9 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
         else {
             continue;
         };
+        if contained_people_ids.is_empty() {
+            continue;
+        }
 
         // Link any people in this zone.
         for contained_person_id in contained_people_ids {
