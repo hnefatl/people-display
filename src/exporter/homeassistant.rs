@@ -1,36 +1,26 @@
 use reqwest;
 use serde_json;
-use std::string::ToString;
+use std::{collections::HashMap, string::ToString};
+use thiserror;
 
 // Re-export the types for convenience.
 pub use crate::homeassistant_types::*;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
-    ReqwestError(reqwest::Error),
+    #[error("Invalid header value: {0}")]
+    InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+    #[error("Reqwest error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
+    #[error("URL parse error: {0}")]
     UrlParseError(String),
-    InvalidResponseBody(reqwest::Error),
+    #[error("JSON decode error from '{0}': {1}. Full text: {2:?}")]
     JsonDecodeError(reqwest::Url, serde_json::Error, String),
+    #[error("JSON encode error from '{0}': {1}.")]
+    JsonEncodeError(reqwest::Url, serde_json::Error),
+    #[error("Invalid access token: {0}")]
     InvalidAccessToken(std::str::Utf8Error),
 }
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::InvalidHeaderValue(e) => f.write_fmt(format_args!("Invalid header value: {e}")),
-            Error::ReqwestError(e) => f.write_fmt(format_args!("Reqwest error: {e}")),
-            Error::UrlParseError(e) => f.write_fmt(format_args!("URL parse error: {e}")),
-            Error::InvalidResponseBody(e) => {
-                f.write_fmt(format_args!("Invalid response body: {e}"))
-            }
-            Error::JsonDecodeError(url, e, body) => f.write_fmt(format_args!(
-                "JSON decode error from '{url}': {e}.\n\nFull text: {body}"
-            )),
-            Error::InvalidAccessToken(e) => f.write_fmt(format_args!("Invalid access token: {e}")),
-        }
-    }
-}
-
 pub struct Client {
     client: reqwest::Client,
     server_endpoint: reqwest::Url,
@@ -87,8 +77,27 @@ impl Client {
         // Risk of parameter injection? Nah, no way.
         let url = self.make_url(&format!("/api/states/{}", &id.to_string()));
         let response = self.get(&url).await?;
-        let body = response.text().await.map_err(Error::InvalidResponseBody)?;
+        let body = response.text().await?;
         serde_json::from_str(&body).map_err(|e| Error::JsonDecodeError(url, e, body))
+    }
+
+    pub async fn get_template<T: serde::de::DeserializeOwned>(
+        &self,
+        template: String,
+    ) -> Result<T, Error> {
+        let url = self.make_url("/api/template");
+        let body = serde_json::to_string(&HashMap::from([("template", template)]))
+            .map_err(|e| Error::JsonEncodeError(url.clone(), e))?;
+
+        let response = self
+            .client
+            .post(url.clone())
+            .body(body)
+            .send()
+            .await?
+            .text()
+            .await?;
+        serde_json::from_str(&response).map_err(|e| Error::JsonDecodeError(url, e, response))
     }
 
     pub async fn get_photo(&self, person: &Person) -> Result<Option<Vec<u8>>, Error> {
@@ -96,10 +105,7 @@ impl Client {
             Some(entity_picture_path) => {
                 let url = self.make_url(&entity_picture_path);
                 let response = self.get(&url).await?;
-                let bytes = response
-                    .bytes()
-                    .await
-                    .map_err(|e| Error::InvalidResponseBody(e))?;
+                let bytes = response.bytes().await?;
                 Ok(Some(bytes.into()))
             }
             None => Ok(None),
@@ -113,32 +119,48 @@ pub struct Snapshot {
     pub zones: std::collections::HashMap<ZoneId, Zone>,
 }
 
-pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Snapshot {
+pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result<Snapshot, Error> {
     // A naive not-very-async implementation. This could be significantly parallelised, but using e.g.
     // tokio::task::JoinSet requires fiddling with lifetimes and moved data.
 
-    let mut people: Vec<Person> = vec![];
+    let mut people = HashMap::new();
     for person_id in person_ids {
-        match client.get_entity::<Person>(&person_id).await {
-            Ok(person) => {
-                people.push(person);
-            }
-            Err(e) => log::warn!("Failed to get person state: {e}"),
-        }
+        let person = client.get_entity::<Person>(person_id).await?;
+        people.insert(person_id, person);
     }
+
+    // Get all zone IDs
+    let template = r#"{{states.zone|list|map(attribute="entity_id")|list|to_json}}"#;
 
     let mut zones = std::collections::HashMap::new();
-    for person in &people {
-        if zones.contains_key(&person.zone_id) {
-            continue;
-        }
-        match client.get_entity::<Zone>(&person.zone_id).await {
-            Ok(zone) => {
-                zones.insert(zone.id.clone(), zone);
+    let zone_ids: Vec<ZoneId> = client.get_template(template.to_string()).await?;
+    for zone_id in zone_ids {
+        let zone = client.get_entity::<Zone>(&zone_id).await?;
+
+        // Link any people in this zone.
+        if let Some(AttributeValue::ListValue(contained_people_ids)) =
+            zone.attributes.get("persons")
+        {
+            for contained_person_id in contained_people_ids {
+                let AttributeValue::StringValue(id) = contained_person_id else {
+                    log::warn!(
+                        "Got a non-string person ID in zone {}: {:?}",
+                        &zone_id,
+                        &contained_person_id
+                    );
+                    continue;
+                };
+                if let Some(person) = people.get_mut(&PersonId::new(id)) {
+                    person.zone_id = Some(zone_id.clone());
+                }
             }
-            Err(e) => log::warn!("Failed to get zone state: {e}"),
         }
+
+        zones.insert(zone_id, zone);
     }
 
-    Snapshot { people, zones }
+    Ok(Snapshot {
+        people: people.into_values().collect(),
+        zones,
+    })
 }

@@ -62,7 +62,7 @@ impl<'a> Tile<'a> {
 
         if zone_texture.is_none() {
             log::trace!(
-                "Using blank texture for {}, no zone photo data provided.",
+                "Using blank zone texture for {}, no zone photo data provided.",
                 &person.id
             );
         }
@@ -143,7 +143,10 @@ pub fn snapshot_to_tiles<'a, T>(
         match Tile::new(
             texture_creator,
             &person,
-            snapshot.zones.get(&person.zone_id),
+            person
+                .zone_id
+                .as_ref()
+                .and_then(|id| snapshot.zones.get(id)),
         ) {
             Ok(image) => tiles.push(image),
             Err(e) => log::error!("Failed to render {person:?}: {e}"),

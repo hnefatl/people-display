@@ -77,7 +77,7 @@ impl ClockServer {
             people.push(clock_pb::Person {
                 photo_data,
                 id: person.id.to_string(),
-                zone_id: person.zone_id.to_string(),
+                zone_id: person.zone_id.map(|id| id.to_string()),
             })
         }
 
@@ -123,13 +123,19 @@ impl ClockService for ClockServer {
             &self.homeassistant_connection_config.endpoint,
         );
         match maybe_client {
-            Ok(client) => {
-                let snapshot = homeassistant::get_snapshot(&client, &self.person_ids).await;
+            Ok(client) => match homeassistant::get_snapshot(&client, &self.person_ids).await {
+                Ok(snapshot) => {
+                    log::trace!("Got snapshot: {snapshot:?}");
 
-                let response = self.snapshot_to_response(&client, snapshot).await;
-                log::trace!("Responding with: {response:?}");
-                Ok(tonic::Response::new(response))
-            }
+                    let response = self.snapshot_to_response(&client, snapshot).await;
+                    log::trace!("Responding with: {response:?}");
+                    Ok(tonic::Response::new(response))
+                }
+                Err(e) => {
+                    log::error!("Failed to get snapshot from HA: {e}");
+                    return Err(tonic::Status::unavailable(e.to_string()));
+                }
+            },
             Err(e) => {
                 let status = tonic::Status::internal(e.to_string());
                 log::error!("Responding with: {e}");

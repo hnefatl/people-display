@@ -63,8 +63,15 @@ pub trait Entity: for<'a> serde::Deserialize<'a> {
 pub struct Person {
     #[serde(rename = "entity_id")]
     pub id: PersonId,
+
+    /// The state of a person entity is the friendly name for the zone they're in.
     #[serde(rename = "state")]
-    pub zone_id: ZoneId,
+    pub zone_friendly_name: String,
+
+    /// The ID of the zone the perso n is in. This can't be gleaned from the entity state,
+    /// it should be filled in by looking at the zone entities (which include person IDs).
+    #[serde(skip)]
+    pub zone_id: Option<ZoneId>,
 
     #[serde(default)]
     pub attributes: AttributeMap,
