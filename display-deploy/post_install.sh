@@ -6,6 +6,11 @@ sed -i 's/#hdmi_mode=.*/hdmi_mode=87/' /boot/config.txt
 echo "hdmi_cvt=800 480 60 6 0 0 0" >> /boot/config.txt
 sed -i 's/#hdmi_drive=.*/hdmi_drive=1/' /boot/config.txt
 
+# Configure GPIO shutdown for the on/off toggle switch.
+# power-on is already enabled by default by pulling GPIO3 low.
+# power-off is configured with this, by pulling GPIO4 low.
+echo "dtoverlay=gpio-shutdown,gpio_pin=4" >> /boot/config.txt
+
 # Configure background
 # This config file doesn't exist until LXDE runs for the first time, which is on first boot not post-install.
 # Create the file with some reasonable values.

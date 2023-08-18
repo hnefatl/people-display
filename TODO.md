@@ -22,8 +22,8 @@
     - [x] Wireguard configured
   - [x] Automatic(?) display update procedures
 - Hardware
-  - [ ] Assembled
-  - [ ] Power button (GPIO-triggered, script listening and running `shutdown`)
+  - [x] Assembled
+  - [x] Power toggle switch (GPIO wakeup/shutdown via kernal `/boot/config.txt` `dtoverlay`)
   - [ ] Own setup configured
   - [ ] Documented
 - Container
