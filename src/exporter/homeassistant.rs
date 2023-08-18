@@ -137,22 +137,24 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
     for zone_id in zone_ids {
         let zone = client.get_entity::<Zone>(&zone_id).await?;
 
+        // If there's no people in this zone, then we don't need to transmit any data about it.
+        let Some(AttributeValue::ListValue(contained_people_ids)) = zone.attributes.get("persons")
+        else {
+            continue;
+        };
+
         // Link any people in this zone.
-        if let Some(AttributeValue::ListValue(contained_people_ids)) =
-            zone.attributes.get("persons")
-        {
-            for contained_person_id in contained_people_ids {
-                let AttributeValue::StringValue(id) = contained_person_id else {
-                    log::warn!(
-                        "Got a non-string person ID in zone {}: {:?}",
-                        &zone_id,
-                        &contained_person_id
-                    );
-                    continue;
-                };
-                if let Some(person) = people.get_mut(&PersonId::new(id)) {
-                    person.zone_id = Some(zone_id.clone());
-                }
+        for contained_person_id in contained_people_ids {
+            let AttributeValue::StringValue(id) = contained_person_id else {
+                log::warn!(
+                    "Got a non-string person ID in zone {}: {:?}",
+                    &zone_id,
+                    &contained_person_id
+                );
+                continue;
+            };
+            if let Some(person) = people.get_mut(&PersonId::new(id)) {
+                person.zone_id = Some(zone_id.clone());
             }
         }
 
