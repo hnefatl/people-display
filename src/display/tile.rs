@@ -137,7 +137,10 @@ pub fn snapshot_to_tiles<'a, T>(
     snapshot: &Snapshot,
 ) -> Vec<Tile<'a>> {
     let mut tiles = vec![];
-    for person in &snapshot.people {
+    let mut sorted_people = snapshot.people.clone();
+    sorted_people.sort_by_key(|p| p.id.clone());
+
+    for person in sorted_people {
         match Tile::new(
             texture_creator,
             &person,
