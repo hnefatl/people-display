@@ -4,8 +4,7 @@ services:
     image: hnefatl/people-display
     restart: unless-stopped
     environment:
-      - ENDPOINTS_FILE=/files/display_endpoints
-      - PASSWORD_FILE=/files/display_password
+      - CONFIG_FILE=/files/display_config
       - DISPLAY=${DISPLAY}
       - XDG_RUNTIME_DIR=/tmp
     volumes:
