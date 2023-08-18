@@ -13,13 +13,13 @@ pub enum Error {
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
     #[error("URL parse error: {0}")]
-    UrlParseError(String),
+    UrlParseError(#[from] url::ParseError),
     #[error("JSON decode error from '{0}': {1}. Full text: {2:?}")]
     JsonDecodeError(reqwest::Url, serde_json::Error, String),
     #[error("JSON encode error from '{0}': {1}.")]
     JsonEncodeError(reqwest::Url, serde_json::Error),
     #[error("Invalid access token: {0}")]
-    InvalidAccessToken(std::str::Utf8Error),
+    InvalidAccessToken(#[from] std::str::Utf8Error),
 }
 pub struct Client {
     client: reqwest::Client,
@@ -31,30 +31,21 @@ impl Client {
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .timeout(std::time::Duration::from_secs(10))
-            .build()
-            .map_err(Error::ReqwestError)?;
+            .build()?;
         Ok(Client {
             client,
-            server_endpoint: reqwest::Url::parse(endpoint)
-                .map_err(|e| Error::UrlParseError(e.to_string()))?,
+            server_endpoint: reqwest::Url::parse(endpoint)?,
         })
     }
 
     fn make_headers(access_token: &secstr::SecStr) -> Result<reqwest::header::HeaderMap, Error> {
-        let access_token_str =
-            std::str::from_utf8(access_token.unsecure()).map_err(Error::InvalidAccessToken)?;
-        let mut auth_header: reqwest::header::HeaderValue = format!("Bearer {access_token_str}")
-            .parse()
-            .map_err(Error::InvalidHeaderValue)?;
+        let access_token_str = std::str::from_utf8(access_token.unsecure())?;
+        let mut auth_header: reqwest::header::HeaderValue =
+            format!("Bearer {access_token_str}").parse()?;
         auth_header.set_sensitive(true);
 
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            "application/json"
-                .parse()
-                .map_err(Error::InvalidHeaderValue)?,
-        );
+        headers.insert(reqwest::header::CONTENT_TYPE, "application/json".parse()?);
         headers.insert(reqwest::header::AUTHORIZATION, auth_header);
         Ok(headers)
     }
@@ -66,11 +57,7 @@ impl Client {
     }
 
     async fn get(&self, url: &reqwest::Url) -> Result<reqwest::Response, Error> {
-        self.client
-            .get(url.clone())
-            .send()
-            .await
-            .map_err(|e| Error::ReqwestError(e))
+        Ok(self.client.get(url.clone()).send().await?)
     }
 
     pub async fn get_entity<T: Entity>(&self, id: &T::Id) -> Result<T, Error> {

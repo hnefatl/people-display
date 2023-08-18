@@ -52,13 +52,11 @@ impl<'a> Tile<'a> {
             .photo_data
             .as_ref()
             .map(|b| bytes_to_texture(texture_creator, &b))
-            .transpose()
-            .map_err(|e| e.to_string())?;
+            .transpose()?;
         let zone_texture = zone
             .and_then(|z| z.photo_data.as_ref())
             .map(|b| bytes_to_texture(texture_creator, &b))
-            .transpose()
-            .map_err(|e| e.to_string())?;
+            .transpose()?;
 
         if zone_texture.is_none() {
             log::trace!(
