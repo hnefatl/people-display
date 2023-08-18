@@ -110,6 +110,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("failed to build window");
     sdl_context.mouse().show_cursor(false);
 
+    // Try to use smooth texture scaling.
+    if !sdl2::hint::set("SDL_HINT_RENDER_SCALE_QUALITY", "linear") {
+        log::error!("Failed to set render scale quality hint.");
+    }
+
     let mut canvas: Canvas<Window> = window
         .into_canvas()
         .build()
