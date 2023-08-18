@@ -5,8 +5,7 @@ services:
     restart: unless-stopped
     environment:
       - CONFIG_FILE=/files/display_config
-      - DISPLAY=${DISPLAY}
-      - XDG_RUNTIME_DIR=/tmp
+      - DISPLAY=:0
     volumes:
       - /files:/files
       - /tmp/:/tmp/
