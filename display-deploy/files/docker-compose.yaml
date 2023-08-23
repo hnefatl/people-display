@@ -18,6 +18,8 @@ services:
     environment:
       - WATCHTOWER_CLEANUP
       - WATCHTOWER_ROLLING_RESTART
+      # 1hr, so that any rare patches I make take effect quickly
+      - WATCHTOWER_POLL_INTERVAL=3600 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/localtime:/etc/localtime:ro
