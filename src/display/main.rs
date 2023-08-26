@@ -117,6 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut canvas: Canvas<Window> = window
         .into_canvas()
+        .present_vsync()
         .build()
         .expect("failed to build window's canvas");
 
