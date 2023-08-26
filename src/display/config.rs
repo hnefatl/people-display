@@ -23,7 +23,8 @@ pub struct Config {
     /// it's converted directly into a `Duration` for ease of use.
     pub poll_interval: Duration,
 
-    // The largest
+    // The largest message that can be received from an exporter. Essentially, the limit
+    // on photo size.
     #[serde(default = "default_max_received_message_size")]
     pub max_received_message_size: usize,
 }
