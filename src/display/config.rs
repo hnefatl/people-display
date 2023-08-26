@@ -22,6 +22,10 @@ pub struct Config {
     /// In the config, this is provided as `poll_interval_seconds: u64`, but at runtime
     /// it's converted directly into a `Duration` for ease of use.
     pub poll_interval: Duration,
+
+    // The largest
+    #[serde(default = "default_max_received_message_size")]
+    pub max_received_message_size: usize,
 }
 impl ConfigParamFromEnv for Config {
     fn parse(val: &str) -> Result<Self, String>
@@ -32,8 +36,11 @@ impl ConfigParamFromEnv for Config {
     }
 }
 
-fn default_poll_interval() -> Duration {
+const fn default_poll_interval() -> Duration {
     Duration::from_secs(60)
+}
+const fn default_max_received_message_size() -> usize {
+    30 * 1024 * 1024 // 30 MiB
 }
 
 fn deserialize_uri<'de, D>(deserializer: D) -> Result<tonic::transport::Uri, D::Error>

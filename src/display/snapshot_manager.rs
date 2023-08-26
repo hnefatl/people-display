@@ -56,11 +56,14 @@ impl SnapshotManager {
                 .connect()
                 .await
                 .map_err(|e| format!("Failed to connect: {e}"))?;
+            log::info!("Connected");
+
             let mut client = ClockServiceClient::with_interceptor(
                 channel,
                 AddPassword::new(endpoint.password.clone()),
             );
-            log::info!("Connected");
+            // Allow receiving larger images than the tonic default 4MiB.
+            client = client.max_decoding_message_size(self.config.max_received_message_size);
 
             let rpc = client
                 .get_people_locations(GetPeopleLocationsRequest {})
