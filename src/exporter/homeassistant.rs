@@ -121,6 +121,7 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
 
     let mut zones = std::collections::HashMap::new();
     let zone_ids: Vec<ZoneId> = client.get_template(template.to_string()).await?;
+    log::trace!("All zone ids: {zone_ids:?}");
     for zone_id in zone_ids {
         let zone = client.get_entity::<Zone>(&zone_id).await?;
 
@@ -132,6 +133,11 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
         if contained_people_ids.is_empty() {
             continue;
         }
+        log::trace!(
+            "Zone {} contains people {:?}",
+            zone.id,
+            contained_people_ids
+        );
 
         // Link any people in this zone.
         for contained_person_id in contained_people_ids {
