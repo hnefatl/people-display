@@ -65,6 +65,18 @@ impl<'a> Tile<'a> {
             );
         }
 
+        // Mark all textures for smooth scaling, otherwise everything gets pixelated.
+        for texture in [&person_texture, &zone_texture] {
+            if let Some(t) = texture {
+                unsafe {
+                    sdl2::sys::SDL_SetTextureScaleMode(
+                        t.raw(),
+                        sdl2::sys::SDL_ScaleMode::SDL_ScaleModeBest,
+                    );
+                }
+            }
+        }
+
         Ok(Tile {
             person_texture,
             background_texture: zone_texture,
