@@ -7,14 +7,12 @@ use lib::clock_pb::clock_service_server::{ClockService, ClockServiceServer};
 use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 use lib::password::CheckPassword;
 
-use log;
-
 fn get_entity_photo<const P: homeassistant::PrefixType>(
     entity_id: &homeassistant::EntityId<P>,
     photo_manager: &photo_manager::PhotoManager,
 ) -> Option<Vec<u8>> {
     // Replace `.` with `_` so that setting a `.png`/`.jpg` extension is easier.
-    let filename = entity_id.to_string().replace(".", "_");
+    let filename = entity_id.to_string().replace('.', "_");
     match photo_manager.get_photo(std::path::Path::new(&filename)) {
         Ok(data) => Some(data),
         Err(e) => {
@@ -83,7 +81,7 @@ impl ClockServer {
 
         let privacy_enabled: bool;
         if let Some(id) = &self.privacy_switch_entity_id {
-            match client.get_entity::<homeassistant::InputBoolean>(&id).await {
+            match client.get_entity::<homeassistant::InputBoolean>(id).await {
                 Ok(privacy_input_boolean) => privacy_enabled = privacy_input_boolean.into(),
                 Err(e) => {
                     log::warn!(

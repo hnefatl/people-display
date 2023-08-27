@@ -33,7 +33,7 @@ impl SnapshotManager {
     pub async fn initialise(config: Config) -> (Self, mpsc::Receiver<EndpointSnapshots>) {
         let (tx, rx) = mpsc::channel();
         let snapshot_manager = SnapshotManager { config, tx };
-        return (snapshot_manager, rx);
+        (snapshot_manager, rx)
     }
 
     pub async fn start_loop(mut self) {

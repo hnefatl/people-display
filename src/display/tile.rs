@@ -6,14 +6,14 @@ use sdl2::render::{Canvas, Texture, TextureCreator};
 
 fn bytes_to_texture<'a, T>(
     texture_creator: &'a TextureCreator<T>,
-    bytes: &Vec<u8>,
+    bytes: &[u8],
 ) -> Result<Texture<'a>, String> {
     texture_creator.load_texture_bytes(bytes)
 }
 
 fn get_texture_rect(texture: &Texture) -> Rect {
     let sdl2::render::TextureQuery { width, height, .. } = texture.query();
-    Rect::new(0, 0, width.into(), height.into())
+    Rect::new(0, 0, width, height)
 }
 
 /// Produce a rect with the same aspect ratio as `inner`, entirely contained within `outer`.
@@ -25,7 +25,7 @@ fn scale_inner_to_outer(outer: Rect, inner: Rect) -> Rect {
     let dest_aspect_ratio = inner.width() as f32 / inner.height() as f32;
 
     // Make a new dest-sized box aligned with the image's top left corner.
-    let mut result = inner.clone();
+    let mut result = inner;
     // Will we have "black bars" at the top or side, if we scaled the two rects to the same size?
     if image_aspect_ratio > dest_aspect_ratio {
         result.set_height(outer.height());
@@ -35,7 +35,7 @@ fn scale_inner_to_outer(outer: Rect, inner: Rect) -> Rect {
         result.set_width(outer.width());
         result.set_height((outer.width() as f32 / dest_aspect_ratio) as u32);
     }
-    return result;
+    result
 }
 
 pub struct Tile<'a> {
@@ -51,11 +51,11 @@ impl<'a> Tile<'a> {
         let person_texture = person
             .photo_data
             .as_ref()
-            .map(|b| bytes_to_texture(texture_creator, &b))
+            .map(|b| bytes_to_texture(texture_creator, b))
             .transpose()?;
         let zone_texture = zone
             .and_then(|z| z.photo_data.as_ref())
-            .map(|b| bytes_to_texture(texture_creator, &b))
+            .map(|b| bytes_to_texture(texture_creator, b))
             .transpose()?;
 
         if zone_texture.is_none() {
@@ -66,14 +66,12 @@ impl<'a> Tile<'a> {
         }
 
         // Mark all textures for smooth scaling, otherwise everything gets pixelated.
-        for texture in [&person_texture, &zone_texture] {
-            if let Some(t) = texture {
-                unsafe {
-                    sdl2::sys::SDL_SetTextureScaleMode(
-                        t.raw(),
-                        sdl2::sys::SDL_ScaleMode::SDL_ScaleModeBest,
-                    );
-                }
+        for texture in [&person_texture, &zone_texture].into_iter().flatten() {
+            unsafe {
+                sdl2::sys::SDL_SetTextureScaleMode(
+                    texture.raw(),
+                    sdl2::sys::SDL_ScaleMode::SDL_ScaleModeBest,
+                );
             }
         }
 
@@ -139,7 +137,7 @@ impl<'a> Tile<'a> {
         // Centre the output in the overall destination rect.
         person_dest.center_on(dest.center());
 
-        canvas.copy(&person_texture, None, person_dest)?;
+        canvas.copy(person_texture, None, person_dest)?;
         Ok(person_dest)
     }
 }
@@ -174,7 +172,6 @@ pub fn snapshots_to_tiles<'a, T>(
 ) -> Vec<Tile<'a>> {
     snapshots
         .iter()
-        .map(|s| snapshot_to_tiles(texture_creator, s))
-        .flatten()
+        .flat_map(|s| snapshot_to_tiles(texture_creator, s))
         .collect()
 }

@@ -56,7 +56,7 @@ pub fn get_optional_env_variable<T: ConfigParamFromEnv>(key: &str) -> Result<Opt
             std::fs::read_to_string(&path).map_err(|e| format!("When opening {path}: {e}"))?;
         return Ok(Some(ConfigParamFromEnv::parse(contents.trim())?));
     }
-    return Ok(None);
+    Ok(None)
 }
 
 pub fn get_env_variable<T: ConfigParamFromEnv>(key: &str) -> Result<T, String> {

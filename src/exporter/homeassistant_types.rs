@@ -1,5 +1,4 @@
 use lib::env_params;
-use serde;
 
 /// An entity ID like `zone.home`. The "prefix" type param would be `zone` and the suffix would be `home`.
 /// This is some magic but allows passing around strongly-typed entity IDs with validation of their format.
@@ -45,12 +44,12 @@ pub type InputBooleanId = EntityId<"input_boolean.">;
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum AttributeValue {
-    StringValue(String),
-    FloatValue(f32),
-    IntValue(i32),
-    BoolValue(bool),
-    ListValue(Vec<AttributeValue>),
-    MapValue(AttributeMap),
+    String(String),
+    Float(f32),
+    Int(i32),
+    Bool(bool),
+    List(Vec<AttributeValue>),
+    Map(AttributeMap),
 }
 pub type AttributeMap = std::collections::HashMap<String, AttributeValue>;
 
@@ -79,7 +78,7 @@ pub struct Person {
 impl Person {
     pub fn get_entity_picture_path(&self) -> Option<String> {
         match self.attributes.get("entity_picture") {
-            Some(AttributeValue::StringValue(s)) => Some(s.clone()),
+            Some(AttributeValue::String(s)) => Some(s.clone()),
             _ => None,
         }
     }

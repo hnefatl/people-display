@@ -1,6 +1,6 @@
 use secstr::SecStr;
 
-const PASSWORD_METADATA_KEY: &'static str = "password-bin";
+const PASSWORD_METADATA_KEY: &str = "password-bin";
 
 #[derive(Clone)]
 pub struct AddPassword {

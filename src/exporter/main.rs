@@ -3,10 +3,7 @@
 #![feature(exhaustive_patterns)]
 #![feature(adt_const_params)]
 
-use env_logger;
-use log;
 use std::net::Ipv4Addr;
-use tokio;
 
 mod clock_service;
 mod config;

@@ -1,7 +1,4 @@
-use reqwest;
-use serde_json;
 use std::{collections::HashMap, string::ToString};
-use thiserror;
 
 // Re-export the types for convenience.
 pub use crate::homeassistant_types::*;
@@ -11,13 +8,13 @@ pub enum Error {
     #[error("Invalid header value: {0}")]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error("Reqwest error: {0}")]
-    ReqwestError(#[from] reqwest::Error),
+    Reqwest(#[from] reqwest::Error),
     #[error("URL parse error: {0}")]
-    UrlParseError(#[from] url::ParseError),
+    UrlParse(#[from] url::ParseError),
     #[error("JSON decode error from '{0}': {1}. Full text: {2:?}")]
-    JsonDecodeError(reqwest::Url, serde_json::Error, String),
+    JsonDecode(reqwest::Url, serde_json::Error, String),
     #[error("JSON encode error from '{0}': {1}.")]
-    JsonEncodeError(reqwest::Url, serde_json::Error),
+    JsonEncode(reqwest::Url, serde_json::Error),
     #[error("Invalid access token: {0}")]
     InvalidAccessToken(#[from] std::str::Utf8Error),
 }
@@ -53,7 +50,7 @@ impl Client {
     fn make_url(&self, path: &str) -> reqwest::Url {
         let mut url = self.server_endpoint.clone();
         url.set_path(path);
-        return url;
+        url
     }
 
     async fn get(&self, url: &reqwest::Url) -> Result<reqwest::Response, Error> {
@@ -65,7 +62,7 @@ impl Client {
         let url = self.make_url(&format!("/api/states/{}", &id.to_string()));
         let response = self.get(&url).await?;
         let body = response.text().await?;
-        serde_json::from_str(&body).map_err(|e| Error::JsonDecodeError(url, e, body))
+        serde_json::from_str(&body).map_err(|e| Error::JsonDecode(url, e, body))
     }
 
     pub async fn get_template<T: serde::de::DeserializeOwned>(
@@ -74,7 +71,7 @@ impl Client {
     ) -> Result<T, Error> {
         let url = self.make_url("/api/template");
         let body = serde_json::to_string(&HashMap::from([("template", template)]))
-            .map_err(|e| Error::JsonEncodeError(url.clone(), e))?;
+            .map_err(|e| Error::JsonEncode(url.clone(), e))?;
 
         let response = self
             .client
@@ -84,7 +81,7 @@ impl Client {
             .await?
             .text()
             .await?;
-        serde_json::from_str(&response).map_err(|e| Error::JsonDecodeError(url, e, response))
+        serde_json::from_str(&response).map_err(|e| Error::JsonDecode(url, e, response))
     }
 
     pub async fn get_photo(&self, person: &Person) -> Result<Option<Vec<u8>>, Error> {
@@ -126,7 +123,7 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
         let zone = client.get_entity::<Zone>(&zone_id).await?;
 
         // If there's no people in this zone, then we don't need to transmit any data about it.
-        let Some(AttributeValue::ListValue(contained_people_ids)) = zone.attributes.get("persons")
+        let Some(AttributeValue::List(contained_people_ids)) = zone.attributes.get("persons")
         else {
             continue;
         };
@@ -141,7 +138,7 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
 
         // Link any people in this zone.
         for contained_person_id in contained_people_ids {
-            let AttributeValue::StringValue(id) = contained_person_id else {
+            let AttributeValue::String(id) = contained_person_id else {
                 log::warn!(
                     "Got a non-string person ID in zone {}: {:?}",
                     &zone_id,

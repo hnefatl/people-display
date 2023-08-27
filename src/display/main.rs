@@ -1,15 +1,12 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
-use env_logger;
-use log;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::rect::Rect;
 use sdl2::video::Window;
 use snapshot_manager::{EndpointSnapshots, SnapshotManager};
 use std::time::Duration;
-use tokio;
 
 use sdl2::render::Canvas;
 

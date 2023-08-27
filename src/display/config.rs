@@ -2,7 +2,6 @@ use std::{str::FromStr, time::Duration};
 
 use lib::env_params::ConfigParamFromEnv;
 use serde::Deserialize;
-use tonic;
 
 #[derive(Deserialize, Debug)]
 pub struct Endpoint {
