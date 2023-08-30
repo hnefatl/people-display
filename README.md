@@ -86,7 +86,7 @@ services:
       - /tmp:/tmp
 ```
 
-The display only takes one configuration parameter `CONFIG` (or `CONFIG_FILE` to pass a file path containing the config), which must be a JSON-format representation of the [`Config` struct](src/display/config.rs). This is necessary versus just taking separate config parameters as environment variables due to the more complex nesting structure of the display config.
+The display only takes one configuration parameter `CONFIG` (or `CONFIG_FILE` to pass a file path containing the config), which must be a JSON-format representation of the [`Config` struct](display/src/config.rs). This is necessary versus just taking separate config parameters as environment variables due to the more complex nesting structure of the display config.
 
 ### Running the display on a Raspberry Pi 3
 
