@@ -174,23 +174,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "clock"
+name = "clock-display"
 version = "0.1.0"
 dependencies = [
+ "clock-lib",
+ "env_logger",
+ "log",
+ "prost",
+ "sdl2",
+ "secstr",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
+name = "clock-exporter"
+version = "0.1.0"
+dependencies = [
+ "clock-lib",
  "env_logger",
  "log",
  "openssl",
  "prost",
  "reqwest",
- "sdl2",
  "secstr",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
  "tonic",
- "tonic-build",
  "url",
+]
+
+[[package]]
+name = "clock-lib"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "secstr",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
