@@ -18,8 +18,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     pkg-config \
     libssl-dev \
     protobuf-compiler \
-    libsdl2-dev \
-    libsdl2-image-dev \
+    libsfml-dev \
     cmake \
     perl
 
@@ -35,8 +34,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt update && apt-get --no-install-recommends install -y \
     libssl-dev \
-    libsdl2-2.0-0 \
-    libsdl2-image-2.0-0
+    libsfml-graphics2.5 \
+    libsfml-window2.5
 
 COPY --from=builder /app/target/release/display /app/display
 ENTRYPOINT ["/app/display"]

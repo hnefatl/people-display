@@ -1,14 +1,13 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::rect::Rect;
-use sdl2::video::Window;
 use snapshot_manager::{EndpointSnapshots, SnapshotManager};
 use std::time::Duration;
 
-use sdl2::render::Canvas;
+use sfml::{
+    graphics::{BlendMode, Color, RenderStates, RenderTarget, RenderWindow, Transform},
+    window::{ContextSettings, Event, Key, Style, VideoMode},
+};
 
 use lib::env_params::get_env_variable;
 
@@ -17,19 +16,19 @@ mod snapshot_manager;
 mod tile;
 use tile::{snapshots_to_tiles, Tile};
 
-fn draw_frame(snapshots: &EndpointSnapshots, canvas: &mut Canvas<Window>) -> Result<(), String> {
-    let texture_creator = canvas.texture_creator();
-    canvas.set_draw_color(sdl2::pixels::Color::BLACK);
-    canvas.clear();
+fn render_frame(
+    snapshots: &EndpointSnapshots,
+    target: &mut dyn RenderTarget,
+) -> Result<(), String> {
+    target.clear(Color::BLACK);
 
-    let tiles = snapshots_to_tiles(&texture_creator, snapshots);
-    draw_tiles(&tiles, canvas)?;
+    let tiles = snapshots_to_tiles(snapshots);
+    render_tiles(&tiles, target)?;
 
-    canvas.present();
     Ok(())
 }
 
-fn draw_tiles(tiles: &Vec<Tile>, canvas: &mut Canvas<Window>) -> Result<(), String> {
+fn render_tiles(tiles: &Vec<Tile>, target: &mut dyn RenderTarget) -> Result<(), String> {
     // Make a square grid of tiles. `grid_size` is how many rows/columns we have.
     let grid_size = ((tiles.len() as f32).sqrt().ceil() as u32).max(1);
 
@@ -39,56 +38,53 @@ fn draw_tiles(tiles: &Vec<Tile>, canvas: &mut Canvas<Window>) -> Result<(), Stri
     // necessary to fit all the tiles with that many columns.
     let num_rows = ((tiles.len() as f32 / num_columns as f32).ceil() as u32).max(1);
 
-    let (output_width, output_height) = canvas.output_size()?;
-    let (tile_width, tile_height) = (output_width / num_columns, output_height / num_rows);
+    let (tile_width, tile_height) = (target.size().x / num_columns, target.size().y / num_rows);
     for (i, tile) in tiles.iter().enumerate() {
         let row = i as u32 / num_columns;
         let column = i as u32 % num_columns;
 
-        let draw_rect = Rect::new(
-            (column * tile_width) as i32,
-            (row * tile_height) as i32,
-            tile_width,
-            tile_height,
-        );
+        // The transform is abused here: it's from screenspace e.g. (0, 0, 800, 480) to a
+        // destination rectangle for the tile to be rendered within. It's easier to do nice
+        // image scaling under this model since we need to clip images to fit within their
+        // rect rather than just smooth-scaling them.
+        let mut transform = Transform::IDENTITY;
+        // Reverse order :/ First scale, then translate.
+        transform.translate((column * tile_width) as f32, (row * tile_height) as f32);
+        transform.scale(1.0 / num_columns as f32, 1.0 / num_rows as f32);
 
-        tile.draw(canvas, draw_rect)?;
+        target.draw_with_renderstates(
+            tile,
+            &RenderStates::new(BlendMode::ALPHA, transform, None, None),
+        );
     }
 
     Ok(())
 }
 
 fn main_loop(
-    canvas: &mut Canvas<Window>,
-    event_pump: &mut sdl2::EventPump,
+    window: &mut RenderWindow,
     snapshot_receiver: std::sync::mpsc::Receiver<EndpointSnapshots>,
 ) {
     let mut latest_snapshots: EndpointSnapshots = vec![];
-    loop {
-        let mut quit = false;
-        for event in event_pump.poll_iter() {
+    while window.is_open() {
+        while let Some(event) = window.poll_event() {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape) | Some(Keycode::Q),
-                    ..
-                } => {
-                    quit = true;
+                Event::Closed | Event::KeyPressed { code: Key::Q, .. } => {
+                    window.close();
+                    break;
                 }
                 _ => {}
             }
-        }
-        if quit {
-            break;
         }
 
         if let Some(snapshots) = snapshot_receiver.try_iter().last() {
             latest_snapshots = snapshots;
         }
-        if let Err(e) = draw_frame(&latest_snapshots, canvas) {
+        if let Err(e) = render_frame(&latest_snapshots, window) {
             log::error!("{}", e);
         }
-        std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
+        window.display();
+        std::thread::sleep(Duration::from_millis(200));
     }
 }
 
@@ -97,34 +93,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let config: config::Config = get_env_variable("CONFIG").unwrap();
 
-    let sdl_context = sdl2::init().expect("failed to init SDL");
-    let video_subsystem = sdl_context.video().expect("failed to get video context");
-    let window = video_subsystem
-        .window("Display", 720, 480)
-        .resizable()
-        .fullscreen_desktop()
-        .build()
-        .expect("failed to build window");
-    sdl_context.mouse().show_cursor(false);
+    let window_settings = ContextSettings {
+        antialiasing_level: 2,
+        ..Default::default()
+    };
 
-    // Try to use smooth texture scaling.
-    if !sdl2::hint::set("SDL_HINT_RENDER_SCALE_QUALITY", "linear") {
-        log::error!("Failed to set render scale quality hint.");
-    }
-
-    let mut canvas: Canvas<Window> = window
-        .into_canvas()
-        .present_vsync()
-        .build()
-        .expect("failed to build window's canvas");
+    let mut window = RenderWindow::new(
+        VideoMode::desktop_mode(),
+        "Display",
+        Style::FULLSCREEN,
+        &window_settings,
+    );
+    // 5fps, don't need anything fancy
+    window.set_framerate_limit(5);
+    window.set_mouse_cursor_visible(false);
+    window.set_vertical_sync_enabled(true);
+    window.set_active(true);
 
     let (snapshot_manager, snapshot_receiver) = SnapshotManager::initialise(config).await;
 
     // Start periodically fetching locations in the background.
     let snapshot_manager_handle = tokio::spawn(snapshot_manager.start_loop());
 
-    let mut event_pump = sdl_context.event_pump().unwrap();
-    main_loop(&mut canvas, &mut event_pump, snapshot_receiver);
+    main_loop(&mut window, snapshot_receiver);
 
     snapshot_manager_handle.abort();
 
