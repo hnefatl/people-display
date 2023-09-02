@@ -21,6 +21,7 @@
     - [x] Systemctl autostart
     - [x] Wireguard configured
   - [x] Automatic(?) display update procedures
+  - [ ] Make sure using high-res photos.
 - Hardware
   - [x] Assembled
   - [x] Power toggle switch (GPIO wakeup/shutdown via kernal `/boot/config.txt` `dtoverlay`)
