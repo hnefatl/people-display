@@ -1,10 +1,7 @@
 use crate::snapshot_manager::{EndpointSnapshots, Snapshot};
 use lib::clock_pb;
 use sfml::{
-    graphics::{
-        Drawable, FloatRect, Image, Rect, RectangleShape, RenderTarget, Sprite, Texture,
-        Transformable,
-    },
+    graphics::{Drawable, Rect, RenderTarget, Sprite, Texture, Transformable},
     system::Vector2,
     ResourceLoadError, SfBox,
 };
@@ -18,31 +15,6 @@ fn new_texture(bytes: &[u8]) -> Result<SfBox<Texture>, Error> {
     Ok(texture)
 }
 
-fn get_texture_rect(texture: &Texture) -> UIntRect {
-    UIntRect::new(0, 0, texture.size().x, texture.size().y)
-}
-
-/// Produce a rect with the same aspect ratio as `inner`, entirely contained within `outer`.
-/// The intent is to produce a scaled but not stretched image that can be rendered to fill
-/// `inner`, potentially cropping out parts of `outer`.
-/// The resulting rect has the same top-left corner as `inner`.
-fn scale_inner_to_outer(outer: UIntRect, inner: UIntRect) -> UIntRect {
-    let image_aspect_ratio = outer.width as f32 / outer.width as f32;
-    let dest_aspect_ratio = inner.width as f32 / inner.height as f32;
-
-    // Make a new dest-sized box aligned with the image's top left corner.
-    let mut result = inner;
-    // Will we have "black bars" at the top or side, if we scaled the two rects to the same size?
-    if image_aspect_ratio > dest_aspect_ratio {
-        result.height = outer.height;
-        // Fix the height, maintaining the original aspect ratio.
-        result.width = (outer.height as f32 * dest_aspect_ratio) as u32;
-    } else {
-        result.width = outer.width;
-        result.height = (outer.width as f32 / dest_aspect_ratio) as u32;
-    }
-    result
-}
 /// Get a new source texture rectangle for a given original `src` texture box, such that the new source ensures no
 /// black bars when rendered into a `clip`-sized space.
 /// In other words, produce a rectangle with the same aspect ratio as `clip` which fits maximally into `src`.
@@ -67,6 +39,25 @@ fn clip_to_aspect_ratio(src: UIntRect, clip: UIntRect) -> UIntRect {
     let y = (src.height - new_src_height) / 2;
 
     Rect::new(x, y, new_src_width, new_src_height)
+}
+
+/// Draw `texture` to `target` within `dest_rect`, clipping the texture to fit entirely within the destination without scaling.
+fn draw_texture_absolute(target: &mut dyn RenderTarget, texture: &Texture, dest_rect: UIntRect) {
+    let texture_rect = UIntRect::new(0, 0, texture.size().x, texture.size().y);
+    // Scale+crop the photo to fit within the destination without stretching.
+    let scaled_background_src = clip_to_aspect_ratio(texture_rect, dest_rect);
+
+    let mut sprite = Sprite::with_texture_and_rect(&texture, scaled_background_src.as_other());
+
+    // Set the absolute position of the sprite in screenspace
+    sprite.set_position(dest_rect.position().as_other());
+    // Scale the sprite to fit exactly within the screenspace rect. Thanks to the clipping above,
+    // we won't spill outside that space or have black bars.
+    sprite.set_scale(Vector2::new(
+        dest_rect.width as f32 / scaled_background_src.width as f32,
+        dest_rect.height as f32 / scaled_background_src.height as f32,
+    ));
+    target.draw_sprite(&sprite, &Default::default());
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -121,39 +112,24 @@ impl Drawable for Tile {
 
         // Draw the background
         if let Some(texture) = &self.background_texture {
-            let background_rect = get_texture_rect(&texture);
-            // Scale+crop the photo to fit within the destination without stretching.
-            let scaled_background_src = clip_to_aspect_ratio(background_rect, dest_rect);
-            let mut sprite =
-                Sprite::with_texture_and_rect(&texture, scaled_background_src.as_other());
-
-            // Set the absolute position of the sprite in screenspace
-            sprite.set_position(dest_rect.position().as_other());
-            // Scale the sprite to fit exactly within the screenspace rect. Thanks to the clipping above,
-            // we won't spill outside that space or have black bars.
-            sprite.set_scale(Vector2::new(
-                dest_rect.width as f32 / scaled_background_src.width as f32,
-                dest_rect.height as f32 / scaled_background_src.height as f32,
-            ));
-            target.draw_sprite(&sprite, &Default::default());
+            draw_texture_absolute(target, texture, dest_rect);
         }
 
         // Draw the person
         if let Some(texture) = &self.person_texture {
             /// What ratio of the destination rect should be allocated to the person's photo.
             const PERSON_RATIO: u32 = 4;
-            let scaled_dest = UIntRect::new(
-                0,
-                0,
+            let (scaled_width, scaled_height) = (
                 dest_rect.width / PERSON_RATIO,
                 dest_rect.height / PERSON_RATIO,
             );
-            let person_rect = get_texture_rect(&texture);
-            // Scale+crop the destination to fit the photo without stretching.
-            let mut person_dest = scale_inner_to_outer(scaled_dest, person_rect);
-            // Centre the output in the overall destination rect.
-            //person_dest.center_on(dest.center());
-            target.draw_sprite(&Sprite::with_texture(&texture), rs);
+            let scaled_dest = UIntRect::new(
+                dest_rect.left + (dest_rect.width - scaled_width) / 2,
+                dest_rect.top + (dest_rect.height - scaled_height) / 2,
+                scaled_width,
+                scaled_height,
+            );
+            draw_texture_absolute(target, texture, scaled_dest);
         }
     }
 }
