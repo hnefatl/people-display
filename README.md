@@ -100,11 +100,7 @@ The display is intended to be deployed on a Raspberry Pi 3, and this repo contai
 
 Then plug the SD card into the pi and boot it up. It'll automatically install DietPi and configure the display to run on startup and update automatically.
 
-{% note %}
-
 On first boot after installation, it may take a while to download the docker images.
-
-{% endnote %}
 
 #### Configuring the linux installation
 
