@@ -21,6 +21,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libsdl2-dev \
     libsdl2-image-dev \
     cmake \
+    gcc \
     perl
 
 COPY --from=planner /app/recipe.json recipe.json
