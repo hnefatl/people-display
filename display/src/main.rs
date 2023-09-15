@@ -89,6 +89,13 @@ fn main_loop(
             log::error!("{}", e);
         }
         std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
+
+        if let Err(e) = canvas
+            .window_mut()
+            .set_fullscreen(sdl2::video::FullscreenType::Desktop)
+        {
+            log::error!("Failed to make fullscreen: {e}")
+        }
     }
 }
 
