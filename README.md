@@ -9,7 +9,7 @@ There are two separate components:
 - the display, which runs on a device with a monitor attached (this repo provides complete reproducible configuration for a Raspberry Pi 3).
 - the exporter, which runs on a potentially different device and communicates with a Home Assistant instance to gather relevant information.
 
-The goal of the two components is to allow for multiple independent and locally-owned exporter instances aggregated to a single display. Which data is available from Home Assistant to the display is controlled entirely by the relevant exporter, giving strong privacy guarantees (want to stop being tracked entirely? Down the docker container).
+The goal of the two components is to allow for multiple independent and locally-owned exporter instances aggregated to a single display. Which data is available from Home Assistant to the display is controlled entirely by the relevant exporter, giving strong privacy guarantees (want to stop being tracked entirely? `docker down` the container).
 
 In practice, I'm going to give a display to my parents so they can see me move around, like the Weasleys watched their children. I'll run an exporter instance connected to my Home Assistant, and potentially other people in my family can do the same for their HA instances.
 
@@ -108,7 +108,30 @@ The linux deployment scripts are tailored to specifically my personal use-case, 
 
 ## Hardware and case
 
-TODO
+### Components
+
+The most significant components are a Pi 3 and a 7" display. Power+video connections use ribbon cables with right-angle endpoints to keep the profile small (reducing the distance from the side of the disply to the side of the case, to avoid a huge bezel).
+
+| Name | Number | Price per unit | Description
+| --- | --- | --- | ---
+| [Raspberry Pi 3 Model B](https://www.pi-shop.ch/raspberry-pi-3) | 1 | 42.90 CHF |
+| [HDMI 7" 800x480 Display Backpack - Without Touch](https://www.adafruit.com/product/2406) | 1 | 71.96 CHF | The screen: has a bit of a weird flickering issue on some images, but generally works well.
+| [Right-angle HDMI ribbon end male](https://www.pi-shop.ch/right-angle-hdmi-plug-adapter) | 1 | 4.90 CHF | Low-profile, to leave only a small distance between the display side and the side of the case.
+| [Straight HDMI ribbon end male](https://www.pi-shop.ch/straight-hdmi-plug-adapter) | 1 | 8.90 CHF | Terminating other-end for the right-angle cable.
+| [Machine Screw Pan Phillips 4-40](https://www.digikey.ch/en/products/detail/keystone-electronics/9900/317321) | 4 | 0.0728 CHF | Screws for fastening the display into the case.
+| [Micro-USB Power Supply](https://www.digikey.ch/en/products/detail/raspberry-pi/SC0624/15298145) | 1 | 7.20 CHF
+| [Right-angle USB Micro-B male](https://www.adafruit.com/product/4105) | 1 | 4.31 CHF | Similar low-profile plug for display power.
+| [Straight USB B male](https://www.adafruit.com/product/4109) | 1 | 4.31 CHF |
+| [10cm USB ribbon cable](https://www.adafruit.com/product/3560) | 1 | 1.31 CHF |
+| [20cm HDMI cable](https://www.pi-shop.ch/diy-hdmi-cable-0-2m-ffc) | 1 | 4.90 CHF |
+| | | 150.9812 CHF |
+
+### Case
+
+The case is 3d-printable (front-down on the bed). [This is the `.stl` file for printing](case/display.stl), and [here's the `.f3d` file for modelling](case/display.f3d).
+
+![front of case](case/case_front.png)
+![back of case](case/case_back.png)
 
 ## Features
 
