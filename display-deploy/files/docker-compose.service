@@ -6,9 +6,11 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/bash -c "docker compose -f /files/docker-compose.yaml up --detach"
+# Sleep 10s to make sure fullscreen works after turning on.
+ExecStart=/bin/bash -c "sleep 10 ; docker compose -f /files/docker-compose.yaml up --detach"
 ExecStop=/bin/bash -c "docker compose -f /files/docker-compose.yaml stop"
 Environment="DISPLAY=:0"
 
 [Install]
 WantedBy=graphical.target
+
