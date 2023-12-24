@@ -90,11 +90,14 @@ fn main_loop(
         }
         std::thread::sleep(Duration::from_millis(200)); // 5fps, don't need anything fancy
 
-        if let Err(e) = canvas
-            .window_mut()
-            .set_fullscreen(sdl2::video::FullscreenType::Desktop)
-        {
-            log::error!("Failed to make fullscreen: {e}")
+        // Hack: sometimes on startup the application is kicked out of fullscreen mode, so
+        // just check and retry every iteration.
+        if canvas.window().fullscreen_state() == sdl2::video::FullscreenType::Off {
+            let fullscreen_mode = sdl2::video::FullscreenType::True;
+            log::info!("Not fullscreen, setting to {:?}", fullscreen_mode);
+            if let Err(e) = canvas.window_mut().set_fullscreen(fullscreen_mode) {
+                log::error!("Failed to make fullscreen: {e}")
+            }
         }
     }
 }
