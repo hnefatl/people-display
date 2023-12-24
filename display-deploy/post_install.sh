@@ -41,7 +41,7 @@ apt-get install wireguard-tools iptables qrencode
 # Enable wireguard on boot, but don't worry about starting it now - post-install means about to reboot anyway.
 # Wireguard will fail to start with `RTNETLINK answers: File exists` if an identical subnet is already provided by
 # e.g. the current wifi network, but it'll work when rebooted on another network.
-systemctl enable /files/wireguard.service
+systemctl enable wg-quick@wg0
 systemctl enable /files/docker-compose.service
 
 # TODO: Configure systemctl.
