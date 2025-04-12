@@ -17,6 +17,8 @@ pub enum Error {
     JsonEncode(reqwest::Url, serde_json::Error),
     #[error("Invalid access token: {0}")]
     InvalidAccessToken(#[from] std::str::Utf8Error),
+    #[error("Invalid data: {0}")]
+    InvalidData(String),
 }
 
 pub struct Client {
@@ -147,7 +149,8 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
                 );
                 continue;
             };
-            if let Some(person) = people.get_mut(&PersonId::new(id)) {
+            let person_id = PersonId::new(id).map_err(Error::InvalidData)?;
+            if let Some(person) = people.get_mut(&person_id) {
                 person.zone_id = Some(zone_id.clone());
             }
         }

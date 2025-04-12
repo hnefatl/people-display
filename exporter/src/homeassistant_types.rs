@@ -1,4 +1,5 @@
 use lib::env_params;
+use regex::Regex;
 
 /// An entity ID like `zone.home`. The "prefix" type param would be `zone` and the suffix would be `home`.
 /// This is some magic but allows passing around strongly-typed entity IDs with validation of their format.
@@ -8,18 +9,23 @@ pub struct EntityIdImpl<const PREFIX: &'static str> {
     suffix: String,
 }
 type PrefixType = &'static str;
-pub trait EntityId: std::fmt::Display {
+pub trait EntityId: std::fmt::Display
+where
+    Self: std::marker::Sized,
+{
     const PREFIX: PrefixType;
-    fn new<S: ToString>(value: &S) -> Self;
+    fn new<S: ToString>(value: &S) -> Result<Self, String>;
 }
 impl<const PREFIX: PrefixType> EntityId for EntityIdImpl<PREFIX> {
     const PREFIX: PrefixType = PREFIX;
 
-    fn new<S: ToString>(value: &S) -> Self {
-        EntityIdImpl {
-            // Remove any existing prefix: turn either `home` or `zone.home` to `zone.home`.
-            suffix: value.to_string().trim_start_matches(PREFIX).to_string(),
+    fn new<S: ToString>(value: &S) -> Result<Self, String> {
+        // Remove any existing prefix: turn either `home` or `zone.home` to `zone.home`.
+        let s = value.to_string().trim_start_matches(PREFIX).to_string();
+        if !Regex::new(r"^\w+$").unwrap().is_match(&s) {
+            return Err(format!("Invalid entity ID: {s}"));
         }
+        Ok(EntityIdImpl { suffix: s })
     }
 }
 impl<const P: PrefixType> std::fmt::Display for EntityIdImpl<P> {
@@ -33,13 +39,13 @@ impl<'de, const P: PrefixType> serde::Deserialize<'de> for EntityIdImpl<P> {
         D: serde::Deserializer<'de>,
     {
         let s: &str = serde::Deserialize::deserialize(deserializer)?;
-        Ok(EntityIdImpl::new(&s))
+        EntityIdImpl::new(&s).map_err(serde::de::Error::custom)
     }
 }
 
 impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityIdImpl<P> {
     fn parse(val: &str) -> Result<Self, String> {
-        Ok(EntityIdImpl::new(&val.to_string()))
+        EntityIdImpl::new(&val.to_string())
     }
 }
 
