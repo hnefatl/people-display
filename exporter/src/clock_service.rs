@@ -7,8 +7,8 @@ use lib::clock_pb::clock_service_server::{ClockService, ClockServiceServer};
 use lib::clock_pb::{GetPeopleLocationsRequest, GetPeopleLocationsResponse};
 use lib::password::CheckPassword;
 
-fn get_entity_photo<const P: homeassistant::PrefixType>(
-    entity_id: &homeassistant::EntityId<P>,
+fn get_entity_photo(
+    entity_id: &impl homeassistant::EntityId,
     photo_manager: &photo_manager::PhotoManager,
 ) -> Option<Vec<u8>> {
     // Replace `.` with `_` so that setting a `.png`/`.jpg` extension is easier.

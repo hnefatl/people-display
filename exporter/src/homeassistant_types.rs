@@ -4,45 +4,52 @@ use lib::env_params;
 /// This is some magic but allows passing around strongly-typed entity IDs with validation of their format.
 /// Any constructors/parsers will accept either e.g. `zone.home` or `home` and convert to canonical form.
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone)]
-pub struct EntityId<const PREFIX: &'static str> {
+pub struct EntityIdImpl<const PREFIX: &'static str> {
     suffix: String,
 }
-pub type PrefixType = &'static str;
-impl<const PREFIX: PrefixType> EntityId<PREFIX> {
-    pub fn new<S: ToString>(value: &S) -> Self {
-        EntityId {
+type PrefixType = &'static str;
+pub trait EntityId: std::fmt::Display {
+    const PREFIX: PrefixType;
+    fn new<S: ToString>(value: &S) -> Self;
+}
+impl<const PREFIX: PrefixType> EntityId for EntityIdImpl<PREFIX> {
+    const PREFIX: PrefixType = PREFIX;
+
+    fn new<S: ToString>(value: &S) -> Self {
+        EntityIdImpl {
             // Remove any existing prefix: turn either `home` or `zone.home` to `zone.home`.
             suffix: value.to_string().trim_start_matches(PREFIX).to_string(),
         }
     }
 }
-impl<const P: PrefixType> std::fmt::Display for EntityId<P> {
+impl<const P: PrefixType> std::fmt::Display for EntityIdImpl<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{P}{}", self.suffix))
+        f.write_fmt(format_args!("{}{}", Self::PREFIX, self.suffix))
     }
 }
-impl<'de, const P: PrefixType> serde::Deserialize<'de> for EntityId<P> {
+impl<'de, const P: PrefixType> serde::Deserialize<'de> for EntityIdImpl<P> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let s: &str = serde::Deserialize::deserialize(deserializer)?;
-        Ok(EntityId::new(&s))
+        Ok(EntityIdImpl::new(&s))
     }
 }
 
-impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityId<P> {
+impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityIdImpl<P> {
     fn parse(val: &str) -> Result<Self, String> {
-        Ok(EntityId::new(&val.to_string()))
+        Ok(EntityIdImpl::new(&val.to_string()))
     }
 }
 
-pub type PersonId = EntityId<"person.">;
-pub type ZoneId = EntityId<"zone.">;
-pub type InputBooleanId = EntityId<"input_boolean.">;
+pub type PersonId = EntityIdImpl<"person.">;
+pub type ZoneId = EntityIdImpl<"zone.">;
+pub type InputBooleanId = EntityIdImpl<"input_boolean.">;
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(untagged)]
+#[allow(dead_code)]
 pub enum AttributeValue {
     String(String),
     Float(f32),
