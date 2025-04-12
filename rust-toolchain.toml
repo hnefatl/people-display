@@ -2,5 +2,5 @@
 # Just specifing `+nightly` to cargo will result in unstable builds, so pin a specific
 # nightly version here.
 [toolchain]
-channel = "nightly-2023-07-21"
+channel = "nightly-2025-02-14" # corresponds to https://releases.rs/docs/1.86.0/
 profile = "minimal"

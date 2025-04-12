@@ -18,6 +18,7 @@ pub enum Error {
     #[error("Invalid access token: {0}")]
     InvalidAccessToken(#[from] std::str::Utf8Error),
 }
+
 pub struct Client {
     client: reqwest::Client,
     server_endpoint: reqwest::Url,
