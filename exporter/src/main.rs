@@ -32,7 +32,7 @@ async fn run(config: &config::Config, addr: std::net::SocketAddr) -> anyhow::Res
         photo_manager::PhotoManager::new(config.photo_directory.clone()),
     );
     let clock_server = tonic::transport::Server::builder().add_service(clock_service);
-    let rocket = web_ui::rocket().ignite().await?;
+    let rocket = web_ui::rocket(config.clone()).ignite().await?;
     let rocket_shutdown = rocket.shutdown();
 
     // Handle mutual graceful shutdown of both servers.

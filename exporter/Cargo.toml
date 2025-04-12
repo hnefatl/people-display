@@ -23,5 +23,6 @@ thiserror = "1.0"
 url = "2.4.0"
 clock-lib = { path = "../lib" }
 rocket = "0.5"
+rocket_dyn_templates = { version = "0.2", features = ["tera"]}
 anyhow = "1.0"
 regex = "1.11"

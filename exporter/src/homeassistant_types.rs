@@ -14,12 +14,12 @@ where
     Self: std::marker::Sized,
 {
     const PREFIX: PrefixType;
-    fn new<S: ToString>(value: &S) -> Result<Self, String>;
+    fn new<S: ToString>(value: S) -> Result<Self, String>;
 }
 impl<const PREFIX: PrefixType> EntityId for EntityIdImpl<PREFIX> {
     const PREFIX: PrefixType = PREFIX;
 
-    fn new<S: ToString>(value: &S) -> Result<Self, String> {
+    fn new<S: ToString>(value: S) -> Result<Self, String> {
         // Remove any existing prefix: turn either `home` or `zone.home` to `zone.home`.
         let s = value.to_string().trim_start_matches(PREFIX).to_string();
         if !Regex::new(r"^\w+$").unwrap().is_match(&s) {
@@ -39,13 +39,13 @@ impl<'de, const P: PrefixType> serde::Deserialize<'de> for EntityIdImpl<P> {
         D: serde::Deserializer<'de>,
     {
         let s: &str = serde::Deserialize::deserialize(deserializer)?;
-        EntityIdImpl::new(&s).map_err(serde::de::Error::custom)
+        EntityIdImpl::new(s).map_err(serde::de::Error::custom)
     }
 }
 
 impl<const P: PrefixType> env_params::ConfigParamFromEnv for EntityIdImpl<P> {
     fn parse(val: &str) -> Result<Self, String> {
-        EntityIdImpl::new(&val.to_string())
+        EntityIdImpl::new(val)
     }
 }
 
@@ -106,6 +106,14 @@ pub struct Zone {
 
     #[serde(default)]
     pub attributes: AttributeMap,
+}
+impl Zone {
+    pub fn get_friendly_name(&self) -> Option<String> {
+        match self.attributes.get("friendly_name") {
+            Some(AttributeValue::String(s)) => Some(s.clone()),
+            _ => None,
+        }
+    }
 }
 impl Entity for Zone {
     type Id = ZoneId;

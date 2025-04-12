@@ -98,6 +98,12 @@ impl Client {
             None => Ok(None),
         }
     }
+
+    pub async fn get_zone_ids(&self) -> Result<Vec<ZoneId>, Error> {
+        // Get all zone IDs
+        let template = r#"{{states.zone|list|map(attribute="entity_id")|list|to_json}}"#;
+        self.get_template(template.to_string()).await
+    }
 }
 
 #[derive(Debug)]
@@ -116,11 +122,8 @@ pub async fn get_snapshot(client: &Client, person_ids: &Vec<PersonId>) -> Result
         people.insert(person_id, person);
     }
 
-    // Get all zone IDs
-    let template = r#"{{states.zone|list|map(attribute="entity_id")|list|to_json}}"#;
-
     let mut zones = std::collections::HashMap::new();
-    let zone_ids: Vec<ZoneId> = client.get_template(template.to_string()).await?;
+    let zone_ids = client.get_zone_ids().await?;
     log::trace!("All zone ids: {zone_ids:?}");
     for zone_id in zone_ids {
         let zone = client.get_entity::<Zone>(&zone_id).await?;

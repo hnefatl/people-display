@@ -11,9 +11,7 @@ fn get_entity_photo(
     entity_id: &impl homeassistant::EntityId,
     photo_manager: &photo_manager::PhotoManager,
 ) -> Option<Vec<u8>> {
-    // Replace `.` with `_` so that setting a `.png`/`.jpg` extension is easier.
-    let filename = entity_id.to_string().replace('.', "_");
-    match photo_manager.get_photo(std::path::Path::new(&filename)) {
+    match photo_manager.get_photo(entity_id) {
         Ok(data) => Some(data),
         Err(e) => {
             log::warn!("Unable to load photo for entity id '{entity_id}': {e}");
