@@ -1,6 +1,6 @@
 # We're using unstable features, so need nightly.
-# Just specifing `+nightly` to cargo will result in unstable builds, so pin a specific
-# nightly version here.
 [toolchain]
-channel = "nightly-2025-02-14" # corresponds to https://releases.rs/docs/1.86.0/
+# https://releases.rs/docs/1.93.0/
+channel = "nightly"
+date = "2025-12-05"
 profile = "minimal"

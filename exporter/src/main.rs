@@ -1,4 +1,5 @@
 #![allow(incomplete_features)]
+#![feature(adt_const_params)]
 #![feature(unsized_const_params)]
 
 use std::net::Ipv4Addr;

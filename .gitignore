@@ -1,5 +1,6 @@
 /target
-.vscode
+result
+.direnv/
 # Contains PII photos of zones/people
 photos/
 # Contains API secrets passed in via file.
