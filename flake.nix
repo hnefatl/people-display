@@ -34,33 +34,34 @@
         cargo = toolchain;
         rustc = toolchain;
       };
-
-      # Shared between both the below, so that `nix build` and `cargo build` both work.
-      shared = {
+    in
+    rec {
+      packages.${system}.default = naersk'.buildPackage rec {
+        src = ./.;
         nativeBuildInputs = with pkgs; [
-          cargo
-          pkg-config
-          toolchain
-          openssl_3
+          openssl
           SDL2
           SDL2_image
           protobuf
         ];
         RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
-        LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-          pkgs.SDL2
-          pkgs.SDL2_image
-        ];
-      };
-    in
-    {
-      packages.${system}.default = naersk'.buildPackage rec {
-        src = ./.;
-        inherit (shared) nativeBuildInputs RUST_SRC_PATH LD_LIBRARY_PATH;
       };
 
       devShells.${system}.default = pkgs.mkShell {
-        inherit (shared) nativeBuildInputs RUST_SRC_PATH LD_LIBRARY_PATH;
+        nativeBuildInputs =
+          with pkgs;
+          [
+            cargo
+            pkg-config
+          ]
+          ++ packages.${system}.default.nativeBuildInputs;
+
+        RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
+        LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+          pkgs.SDL2
+          pkgs.SDL2_image
+          pkgs.openssl
+        ];
       };
     };
 }
