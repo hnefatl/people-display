@@ -6,6 +6,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug)]
 pub struct Endpoint {
     #[serde(deserialize_with = "deserialize_uri")]
+    /// In the format "h2c://...:..." for gRPC.
     pub uri: tonic::transport::Uri,
     #[serde(deserialize_with = "deserialize_secstr")]
     pub password: secstr::SecStr,
