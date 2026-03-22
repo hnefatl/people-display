@@ -211,44 +211,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "clock-display"
-version = "0.1.0"
-dependencies = [
- "aws-lc-rs",
- "clock-lib",
- "env_logger 0.10.2",
- "log",
- "prost",
- "sdl2",
- "secstr",
- "serde",
- "serde_json",
- "tokio",
- "tonic",
-]
-
-[[package]]
-name = "clock-exporter"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "aws-lc-rs",
- "clock-lib",
- "env_logger 0.11.9",
- "log",
- "prost",
- "regex",
- "reqwest",
- "secstr",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tonic",
- "url",
-]
-
-[[package]]
 name = "clock-lib"
 version = "0.1.0"
 dependencies = [
@@ -310,6 +272,23 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+
+[[package]]
+name = "display"
+version = "1.0.0"
+dependencies = [
+ "aws-lc-rs",
+ "clock-lib",
+ "env_logger 0.10.2",
+ "log",
+ "prost",
+ "sdl2",
+ "secstr",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+]
 
 [[package]]
 name = "displaydoc"
@@ -393,6 +372,27 @@ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "exporter"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "aws-lc-rs",
+ "clock-lib",
+ "env_logger 0.11.9",
+ "log",
+ "prost",
+ "regex",
+ "reqwest",
+ "secstr",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tonic",
+ "url",
 ]
 
 [[package]]
