@@ -8,19 +8,19 @@ name = "exporter"
 path = "src/main.rs"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
-# Need client-side TLS support for the display to connect to HTTPS endpoints.
-tonic = { version = "0.9.2", features = ["tls", "tls-roots"] }
-prost = "0.11"
-log = "0.4.19"
-env_logger = "0.10.0"
-secstr = "0.5.1"
-openssl = "0.10.55"
-thiserror = "1.0"
-url = "2.4.0"
 clock-lib = { path = "../lib" }
-anyhow = "1.0"
-regex = "1.11"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.13", features = ["json"] }
+# Need client-side TLS support for the display to connect to HTTPS endpoints.
+tonic = { version = "0.14", features = ["tls-aws-lc"] }
+prost = "0.14"
+log = "0.4"
+env_logger = "0.11"
+secstr = "0.5"
+openssl = "0.10"
+thiserror = "1"
+url = "2"
+anyhow = "1"
+regex = "1"
