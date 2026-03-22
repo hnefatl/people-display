@@ -39,7 +39,6 @@
       packages.${system}.default = naersk'.buildPackage rec {
         src = ./.;
         nativeBuildInputs = with pkgs; [
-          openssl
           SDL2
           SDL2_image
           protobuf
@@ -60,7 +59,6 @@
         LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
           pkgs.SDL2
           pkgs.SDL2_image
-          pkgs.openssl
         ];
       };
     };
