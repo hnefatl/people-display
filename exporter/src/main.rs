@@ -9,7 +9,6 @@ mod config;
 mod homeassistant;
 mod homeassistant_types;
 mod photo_manager;
-mod web_ui;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() {
@@ -33,25 +32,11 @@ async fn run(config: &config::Config, addr: std::net::SocketAddr) -> anyhow::Res
         photo_manager::PhotoManager::new(config.photo_directory.clone()),
     );
     let clock_server = tonic::transport::Server::builder().add_service(clock_service);
-    let rocket = web_ui::rocket(config.clone()).ignite().await?;
-    let rocket_shutdown = rocket.shutdown();
 
-    // Handle mutual graceful shutdown of both servers.
-    let clock_server_task = async move || {
-        log::info!("Starting ClockServer on {addr}");
-        let status = clock_server
-            .serve_with_shutdown(addr, rocket_shutdown.clone())
-            .await;
-        log::info!("ClockServer stopped with status: {status:?}");
-        rocket_shutdown.notify();
-        status
-    };
+    log::info!("Starting ClockServer on {addr}");
+    let status = clock_server.serve(addr).await;
+    log::info!("ClockServer stopped with status: {status:?}");
+    status?;
 
-    let (rocket_status, clock_server_status) = tokio::join!(
-        tokio::spawn(rocket.launch()),
-        tokio::spawn(clock_server_task())
-    );
-    rocket_status??;
-    clock_server_status??;
     Ok(())
 }
